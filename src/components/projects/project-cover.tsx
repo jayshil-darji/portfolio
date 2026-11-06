@@ -28,8 +28,9 @@ export function projectInitials(name: string) {
 }
 
 /**
- * Project cover: the screenshot if `project.image` is set, otherwise a
- * generated cover (gradient + initials + faint grid). Decorative — the
+ * Project cover: `project.image` (public/images/projects/{slug}.jpg,
+ * 1600×1000 — overwrite the file to swap in a screenshot) if set, otherwise
+ * a CSS-generated cover (gradient + initials + faint grid). Decorative — the
  * project name is always in the text next to it. Fills its parent, which
  * owns the aspect ratio (no layout shift either way).
  */
@@ -44,11 +45,13 @@ export function ProjectCover({
 }) {
   if (project.image) {
     return (
+      // Below the fold: lazy (next/image default), responsive `sizes`.
       <Image
         src={project.image}
         alt=""
         fill
         sizes={sizes}
+        loading="lazy"
         className={cn("object-cover", className)}
       />
     );

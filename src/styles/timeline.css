@@ -35,10 +35,6 @@
   background: linear-gradient(135deg, var(--brand-teal), var(--brand-violet));
   box-shadow: 0 0 8px color-mix(in oklch, var(--brand-teal) 70%, transparent);
 }
-.tl-node-core--now {
-  background: oklch(0.8 0.15 160); /* emerald, like the "live" dots */
-  box-shadow: 0 0 8px oklch(0.8 0.15 160 / 0.6);
-}
 
 /* Milestone sub-nodes inside the card. */
 .tl-subnode {
@@ -47,17 +43,23 @@
 }
 
 /* Card reveal: --reveal 0 → 1 (motion value). Slides in from the line's
-   side: from the right on mobile; outward on desktop. */
+   side: from the right on mobile; outward on desktop.
+   The offset must stay below the page gutter (px-4 = 1rem, sm:px-6 =
+   1.5rem) or unrevealed cards poke past the viewport edge — 1.5rem on
+   mobile overflowed by 8px. */
 .tl-card {
   --reveal: 1;
-  --slide: 1.5rem;
+  --slide: 0.75rem;
   opacity: var(--reveal);
   translate: calc((1 - var(--reveal)) * var(--slide)) 0;
   will-change: opacity, translate;
 }
 @media (min-width: 1024px) {
+  .tl-card {
+    --slide: 1rem;
+  }
   li[data-side="left"] > .tl-card {
-    --slide: -1.5rem;
+    --slide: -1rem;
   }
 }
 

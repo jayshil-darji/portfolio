@@ -18,6 +18,8 @@
  *     only runs it while the card is hovered / focused within.
  *  5. prefers-reduced-motion: never rotates (CSS).
  *  6. No "use client" needed (no hooks / handlers).
+ *  7. "hover" rotation runs on :hover only for fine, hover-capable
+ *     pointers (touch left :hover stuck after a tap); :focus-within always.
  */
 
 import { forwardRef, type CSSProperties, type HTMLAttributes } from "react";

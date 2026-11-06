@@ -61,19 +61,21 @@ export function MorphText({
   // LOCAL PATCH: keyframes generated from the word count. Upstream used
   // fixed percentages of the whole cycle (visible 15–35%, out by 50%),
   // tuned for ~2–3 words: with 4+ words neighbours overlapped for ~25% of
-  // every slot (two phrases stacked = garbled, esp. on mobile). Now each
-  // word owns 1/n of the cycle: blur-in over the first 12%, fully visible
-  // until 86%, blur-out by 104% — a ~4% overlap where both are heavily
-  // blurred (the gooey "morph"), so only one role is ever readable.
+  // every slot (two phrases stacked = garbled). Each word owns 1/n of the
+  // cycle and the change is a true CROSSFADE: a word morphs in over the
+  // first 20% of its slot while the previous one morphs out over the same
+  // window (its 100–120%). Opacities are complementary, so some text is
+  // always visible (an earlier version blurred both out at once and the
+  // threshold filter left the line blank). Steady state: 20–100% of a slot.
   const keyframesName = `morph-word-rotate-${uid}`;
   const slot = 100 / words.length;
   const pct = (f: number) => `${Math.min(100, +(slot * f).toFixed(3))}%`;
   const keyframes = `
     @keyframes ${keyframesName} {
-      0% { opacity: 0; filter: blur(12px); transform: translate(-50%, -50%) scale(0.92); }
-      ${pct(0.12)} { opacity: 1; filter: blur(0px); transform: translate(-50%, -50%) scale(1); }
-      ${pct(0.86)} { opacity: 1; filter: blur(0px); transform: translate(-50%, -50%) scale(1); }
-      ${pct(1.04)}, 100% { opacity: 0; filter: blur(12px); transform: translate(-50%, -50%) scale(1.06); }
+      0% { opacity: 0; filter: blur(8px); transform: translate(-50%, -50%) scale(0.94); }
+      ${pct(0.2)} { opacity: 1; filter: blur(0px); transform: translate(-50%, -50%) scale(1); }
+      ${pct(1)} { opacity: 1; filter: blur(0px); transform: translate(-50%, -50%) scale(1); }
+      ${pct(1.2)}, 100% { opacity: 0; filter: blur(8px); transform: translate(-50%, -50%) scale(1.04); }
     }`;
 
   // Build per-word keyframe + delay styles
@@ -83,12 +85,22 @@ export function MorphText({
   }));
 
   return (
-    <div className={cn("morph-text-root relative flex flex-col items-center", className)}>
+    <div
+      className={cn(
+        "morph-text-root relative flex flex-col items-center",
+        className,
+      )}
+    >
       {/* ── Threshold SVG filter (hidden) ─────────────────────────── */}
       <svg
         aria-hidden="true"
         focusable="false"
-        style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}
+        style={{
+          position: "absolute",
+          width: 0,
+          height: 0,
+          pointerEvents: "none",
+        }}
       >
         <defs>
           <filter id={filterId}>
@@ -105,7 +117,10 @@ export function MorphText({
 
       {/* ── Morphing word container ────────────────────────────────── */}
       <div
-        className={cn("morph-text-container relative select-none", textClassName)}
+        className={cn(
+          "morph-text-container relative select-none",
+          textClassName,
+        )}
         style={{
           fontSize,
           fontWeight: 700,
@@ -149,7 +164,7 @@ export function MorphText({
         <p
           className={cn(
             "morph-subtext mt-8 uppercase tracking-[0.2em] text-[#888]",
-            subtextClassName
+            subtextClassName,
           )}
           style={{
             fontSize: "1.2rem",

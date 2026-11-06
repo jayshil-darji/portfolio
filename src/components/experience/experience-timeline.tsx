@@ -9,8 +9,14 @@ import {
   type MotionValue,
   type Variants,
 } from "motion/react";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { GlowBorderCard } from "@/components/ui/glow-border-card";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { InteractiveGlowCard } from "@/components/ui/interactive-glow-card";
 import TextAnimation from "@/components/ui/stagger-text";
 import type {
   ExperienceEntry,
@@ -29,6 +35,10 @@ const MILESTONE_ICONS: Record<MilestoneIcon, LucideIcon> = {
 // Glow ring colours: theme tokens (teal → blue → violet).
 const GLOW = ["var(--brand-teal)", "var(--brand-blue)", "var(--brand-violet)"];
 
+/** Cards reveal / nodes light as they cross this fraction of the viewport
+ *  height (0.8 = entering the bottom 20%). The drawn line uses it too. */
+const TRIGGER_LINE = 0.8;
+
 const years = (e: ExperienceEntry) =>
   e.kind === "now"
     ? "Now"
@@ -39,9 +49,13 @@ const years = (e: ExperienceEntry) =>
  * - The line fill (scaleY) and its leading dot (translateY) follow scroll
  *   progress through the list — motion values only, no React state per
  *   scroll tick.
- * - Each role's node lights up (glow + scale) when the fill reaches it; its
- *   card fades/slides in just before. Thresholds = each node's measured
- *   position along the list (re-measured on resize only).
+ * - Trigger line = 80% of the viewport height (the bottom 20%). As a node
+ *   crosses it, its card finishes fading/sliding in (over the last 80px)
+ *   and the node lights (last 16px). Card + node read the RAW page scrollY
+ *   against each node's measured trigger position (unclamped — a progress
+ *   value clamped at 0 had the first card half-revealed at load), so they
+ *   never lag; only the drawn line/dot is spring-smoothed (it may trail
+ *   slightly on fast scrolls). Re-measured on resize only.
  * - ≥1024px: line centred, cards alternate left/right; below: line on the
  *   left, cards full width to its right.
  * - Reduced motion: static values (line fully drawn, every node lit, every
@@ -56,9 +70,11 @@ export function ExperienceTimeline({
   const listRef = useRef<HTMLOListElement>(null);
   const reduced = usePrefersReducedMotion();
 
+  const { scrollY } = useScroll();
   const { scrollYProgress } = useScroll({
     target: listRef,
-    offset: ["start 0.65", "end 0.65"],
+    // Line tip on the trigger line (TRIGGER_LINE = 0.8).
+    offset: ["start 0.8", "end 0.8"],
   });
   const progress = useSpring(scrollYProgress, {
     stiffness: 220,
@@ -67,31 +83,32 @@ export function ExperienceTimeline({
   });
   const dotY = useTransform(progress, (v) => `${v * 100}%`);
 
-  // Fallback thresholds until measured (same on server and client).
-  const [thresholds, setThresholds] = useState(() =>
-    entries.map((_, i) => (i + 0.5) / entries.length),
+  // scrollY at which each node's centre reaches the trigger line.
+  // Fallback until measured (same on server and client): never reached.
+  const [triggers, setTriggers] = useState<number[]>(() =>
+    entries.map(() => Number.MAX_SAFE_INTEGER),
   );
   useEffect(() => {
     const list = listRef.current;
     if (!list) return;
     const measure = () => {
-      const l = list.getBoundingClientRect();
-      if (!l.height) return;
       // Measure the dot itself — its grid cell stretches to the card height.
       const nodes = list.querySelectorAll<HTMLElement>("[data-timeline-dot]");
-      setThresholds(
+      const line = window.innerHeight * TRIGGER_LINE;
+      setTriggers(
         [...nodes].map((n) => {
           const r = n.getBoundingClientRect();
-          return Math.min(
-            1,
-            Math.max(0, (r.top + r.height / 2 - l.top) / l.height),
-          );
+          return window.scrollY + r.top + r.height / 2 - line;
         }),
       );
     };
     const ro = new ResizeObserver(measure);
     ro.observe(list);
-    return () => ro.disconnect();
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, []);
 
   return (
@@ -121,8 +138,8 @@ export function ExperienceTimeline({
             }
             entry={entry}
             side={i % 2 === 0 ? "left" : "right"}
-            progress={progress}
-            threshold={thresholds[i] ?? 1}
+            scrollY={scrollY}
+            trigger={triggers[i] ?? Number.MAX_SAFE_INTEGER}
             reduced={reduced}
           />
         ))}
@@ -134,23 +151,22 @@ export function ExperienceTimeline({
 function TimelineItem({
   entry,
   side,
-  progress,
-  threshold,
+  scrollY,
+  trigger,
   reduced,
 }: {
   entry: ExperienceEntry;
   side: "left" | "right";
-  progress: MotionValue<number>;
-  threshold: number;
+  /** Raw page scroll position. */
+  scrollY: MotionValue<number>;
+  /** scrollY at which this node reaches the trigger line. */
+  trigger: number;
   reduced: boolean;
 }) {
-  // 0 → 1 as the fill approaches / reaches this node.
-  const lit = useTransform(progress, [threshold - 0.015, threshold], [0, 1]);
-  const reveal = useTransform(
-    progress,
-    [threshold - 0.12, threshold - 0.02],
-    [0, 1],
-  );
+  // 0 → 1 as this node approaches the trigger line: the card over the last
+  // 80px, the node over the last 16px — both done as the node crosses it.
+  const lit = useTransform(scrollY, [trigger - 16, trigger], [0, 1]);
+  const reveal = useTransform(scrollY, [trigger - 80, trigger], [0, 1]);
   const nodeScale = useTransform(lit, [0, 1], [1, 1.3]);
 
   const left = side === "left";
@@ -177,22 +193,14 @@ function TimelineItem({
       >
         <span
           data-timeline-dot=""
-          className={cn(
-            "tl-node relative grid size-5 place-items-center rounded-full border bg-background",
-            entry.kind === "now"
-              ? "border-dashed border-white/30"
-              : "border-white/20",
-          )}
+          className="tl-node relative grid size-5 place-items-center rounded-full border border-white/20 bg-background"
         >
           <motion.span
             className="tl-node-glow absolute -inset-2 rounded-full"
             style={{ opacity: reduced ? 1 : lit }}
           />
           <motion.span
-            className={cn(
-              "tl-node-core relative block size-2 rounded-full",
-              entry.kind === "now" && "tl-node-core--now",
-            )}
+            className="tl-node-core relative block size-2 rounded-full"
             style={
               reduced
                 ? { scale: 1, opacity: 1 }
@@ -233,22 +241,29 @@ const milestoneItem: Variants = {
   },
 };
 
-function RoleCard({ role }: { role: ExperienceRole }) {
+/** The one card used by every stop (roles and "Now"): glow border + the
+ *  shared interactive hover. */
+function TimelineCard({ children }: { children: ReactNode }) {
   return (
-    <GlowBorderCard
-      width="100%"
-      aspectRatio="auto"
+    <InteractiveGlowCard
       borderRadius="1rem"
       gradientColors={GLOW}
-      animate="hover"
-      animationDuration={6}
       borderWidth="0.9em"
-      blurAmount="1em"
       inset="-0.6em"
       className="border border-white/10"
       contentClassName="p-5 sm:p-6"
     >
-      <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
+      {children}
+    </InteractiveGlowCard>
+  );
+}
+
+const CARD_TITLE = "text-xl font-semibold tracking-tight sm:text-2xl";
+
+function RoleCard({ role }: { role: ExperienceRole }) {
+  return (
+    <TimelineCard>
+      <h3 className={CARD_TITLE}>
         <TextAnimation>{role.company}</TextAnimation>
       </h3>
       <p className="mt-1 text-sm font-medium text-sky-200/85">{role.role}</p>
@@ -296,13 +311,15 @@ function RoleCard({ role }: { role: ExperienceRole }) {
           })}
         </motion.ul>
       )}
-    </GlowBorderCard>
+    </TimelineCard>
   );
 }
 
+/** Same card as the roles; the pulsing "In progress" label is the only
+ *  differentiator. */
 function NowCard({ now }: { now: ExperienceNow }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/20 bg-white/[0.02] p-5 sm:p-6">
+    <TimelineCard>
       <p className="mb-2 flex items-center gap-2 text-xs font-medium tracking-widest text-muted-foreground uppercase">
         <span aria-hidden="true" className="relative flex size-2">
           <span className="live-ping absolute inline-flex size-full rounded-full bg-emerald-400 opacity-75" />
@@ -310,10 +327,12 @@ function NowCard({ now }: { now: ExperienceNow }) {
         </span>
         In progress
       </p>
-      <h3 className="text-lg font-semibold tracking-tight text-foreground/90">
-        {now.title}
+      <h3 className={CARD_TITLE}>
+        <TextAnimation>{now.title}</TextAnimation>
       </h3>
-      <p className="mt-1 text-sm text-muted-foreground">{now.text}</p>
-    </div>
+      <p className="mt-3 text-sm leading-relaxed text-foreground/80">
+        {now.text}
+      </p>
+    </TimelineCard>
   );
 }
