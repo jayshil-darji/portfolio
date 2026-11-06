@@ -1,0 +1,71 @@
+/*
+ * Experience timeline (components/experience/experience-timeline.tsx).
+ * Motion drives `transform` / `opacity` (and the --reveal variable, which
+ * only feeds opacity + translate). Defaults = the finished state, so
+ * reduced motion (no motion styles applied) shows everything drawn and lit.
+ */
+
+/* Drawn fill + its leading dot. */
+.tl-fill {
+  background: linear-gradient(
+    to bottom,
+    var(--brand-teal),
+    var(--brand-blue) 55%,
+    var(--brand-violet)
+  );
+  box-shadow: 0 0 10px color-mix(in oklch, var(--brand-blue) 45%, transparent);
+}
+.tl-head {
+  background: oklch(0.97 0.02 220);
+  box-shadow:
+    0 0 0 3px color-mix(in oklch, var(--brand-blue) 35%, transparent),
+    0 0 16px 2px color-mix(in oklch, var(--brand-teal) 70%, transparent);
+}
+
+/* Role node: ring + core; lights up (glow + scale) when reached. */
+.tl-node-glow {
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--brand-teal) 55%, transparent) 0%,
+    color-mix(in oklch, var(--brand-blue) 25%, transparent) 45%,
+    transparent 70%
+  );
+}
+.tl-node-core {
+  background: linear-gradient(135deg, var(--brand-teal), var(--brand-violet));
+  box-shadow: 0 0 8px color-mix(in oklch, var(--brand-teal) 70%, transparent);
+}
+
+/* Milestone sub-nodes inside the card. */
+.tl-subnode {
+  background: linear-gradient(135deg, var(--brand-teal), var(--brand-blue));
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--brand-teal) 45%, transparent);
+}
+
+/* Card reveal: --reveal 0 → 1 (motion value). Slides in from the line's
+   side: from the right on mobile; outward on desktop.
+   The offset must stay below the page gutter (px-4 = 1rem, sm:px-6 =
+   1.5rem) or unrevealed cards poke past the viewport edge — 1.5rem on
+   mobile overflowed by 8px. */
+.tl-card {
+  --reveal: 1;
+  --slide: 0.75rem;
+  opacity: var(--reveal);
+  translate: calc((1 - var(--reveal)) * var(--slide)) 0;
+  will-change: opacity, translate;
+}
+@media (min-width: 1024px) {
+  .tl-card {
+    --slide: 1rem;
+  }
+  li[data-side="left"] > .tl-card {
+    --slide: -1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-card {
+    opacity: 1 !important;
+    translate: none !important;
+  }
+}

@@ -68,19 +68,38 @@ export interface SkillGroup {
   skills: Skill[];
 }
 
-export interface ExperienceItem {
+/** Icon shown on a milestone's award chip. */
+export type MilestoneIcon = "trophy" | "medal";
+
+/** A notable piece of work within a role. No dates — order is enough. */
+export interface Milestone {
+  title: string;
+  text: string;
+  /** Award / recognition, shown as a small chip. */
+  badge?: string;
+  icon?: MilestoneIcon;
+}
+
+export interface ExperienceRole {
+  kind: "role";
   company: string;
   role: string;
-  location?: string;
-  /** "YYYY" or "YYYY-MM" */
+  /** "YYYY" */
   start: string;
-  /** "YYYY", "YYYY-MM" or "present" */
-  end: string | "present";
+  /** "YYYY" or "present" */
+  end: string;
   summary?: string;
-  highlights: string[];
-  tech: string[];
-  url?: string;
+  milestones: Milestone[];
 }
+
+/** The open-ended "what I'm doing now" entry at the end of the timeline. */
+export interface ExperienceNow {
+  kind: "now";
+  title: string;
+  text: string;
+}
+
+export type ExperienceEntry = ExperienceRole | ExperienceNow;
 
 export type ProjectType = "professional" | "personal";
 
@@ -112,8 +131,9 @@ export interface Project {
    */
   links?: ProjectLinks;
   /**
-   * Screenshot under /public, e.g. "/projects/kero.webp". Empty/undefined →
-   * a generated cover is shown, so adding one later is a data-only change.
+   * Cover image under /public: "/images/projects/{slug}.jpg", 1600×1000
+   * (16:10, shown uncropped). Swap in a real screenshot by overwriting the
+   * file — no code change. Undefined → a CSS-generated cover.
    */
   image?: string;
   /** Large tile in the Projects bento. */
@@ -149,11 +169,22 @@ export interface Profile {
   currently: CurrentlyItem[];
   /** Projects section copy. */
   projectsIntro: { title: string; description: string };
+  /** Contact section copy. */
+  contact: {
+    /** Marquee phrase (repeated in a decorative band; read once by SRs). */
+    marquee: string;
+    /** Left-column heading + sub-line. */
+    heading: string;
+    subline: string;
+  };
+  /** Local time shown in Contact (always this zone, whatever the visitor's). */
+  timeZone: { iana: string; abbreviation: string; utcOffset: string };
   /** Skills section copy. */
   skillsIntro: { title: string; description: string };
   /** Ring order = inner → outer in the Skills orbit. */
   skills: SkillGroup[];
-  experience: ExperienceItem[];
+  /** Timeline, oldest → newest. */
+  experience: ExperienceEntry[];
   projects: Project[];
   socials: SocialLink[];
   seo: {
@@ -168,18 +199,17 @@ export const profile: Profile = {
   title: "Senior Software Engineer",
   roles: [
     "Senior Software Engineer",
-    "Angular & TypeScript Specialist",
     "Frontend Engineer",
     "Full-stack Builder",
   ],
   tagline: "10 years of building fast, polished, scalable web applications.",
-  location: "Gujarat, India",
+  location: "India",
   yearsOfExperience: 10,
   email: "jayshild033@gmail.com",
   photo: "/images/jayshil.jpg",
   photoCutout: "/images/jayshil-cutout.png",
   about: [
-    "I'm a Senior Software Engineer from Gujarat, India, with 10 years of building web applications. At Cygnet.One I lead frontend development on enterprise Angular platforms, from a government notary portal to an omnichannel business messaging platform, mentoring developers and owning code quality and releases. Outside work I build full-stack products with Next.js and Supabase, and I'm now exploring GenAI engineering.",
+    "I'm a Senior Software Engineer from India, with 10 years of building web applications. At Cygnet.One I lead frontend development on enterprise Angular platforms, from a government notary portal to an omnichannel business messaging platform, mentoring developers and owning code quality and releases. Outside work I build full-stack products with Next.js and Supabase, and I'm now exploring GenAI engineering.",
   ],
   aboutHighlights: [
     "Cygnet.One",
@@ -203,6 +233,16 @@ export const profile: Profile = {
       text: "This portfolio, with Next.js and heavy motion",
     },
   ],
+  contact: {
+    marquee: "Let's work together",
+    heading: "Have a role or project in mind?",
+    subline: "I'm happy to talk.",
+  },
+  timeZone: {
+    iana: "Asia/Kolkata",
+    abbreviation: "IST",
+    utcOffset: "UTC+5:30",
+  },
   projectsIntro: {
     title: "Selected Work",
     description:
@@ -601,29 +641,46 @@ chunks = splitter.split_text(document)`,
   ],
   experience: [
     {
-      company: "Cygnet.One",
-      role: "Senior Software Engineer",
-      start: "2020",
-      end: "present",
-      highlights: [
-        "Spot Award for remarkable contribution to the Kero messaging platform",
-        "Accolades for delivery on the Nobilex government notary portal",
-        "Lead frontend development, mentor junior developers, own code reviews and the release process",
-      ],
-      tech: [],
-    },
-    {
+      kind: "role",
       company: "Brainvire",
       role: "Software Engineer",
       start: "2016",
       end: "2020",
-      highlights: ["TODO: achievement 1", "TODO: achievement 2"],
-      tech: [],
+      milestones: [], // TODO(Jayshil): add Brainvire highlights.
+    },
+    {
+      kind: "role",
+      company: "Cygnet.One",
+      role: "Senior Software Engineer",
+      start: "2020",
+      end: "present",
+      summary:
+        "Lead frontend development on enterprise Angular platforms, mentor developers, and own code reviews and releases.",
+      milestones: [
+        {
+          title: "Nobilex: Government Notary Portal",
+          text: "Led frontend development with Angular and Keycloak RBAC",
+          badge: "Client accolades",
+          icon: "medal",
+        },
+        {
+          title: "Kero: Business Messaging Platform",
+          text: "Built messaging, media and campaign features in Angular 20",
+          badge: "Spot Award",
+          icon: "trophy",
+        },
+      ],
+    },
+    {
+      kind: "now",
+      title: "Exploring GenAI engineering",
+      text: "Learning Python, RAG and LangChain to build LLM-powered apps.",
     },
   ],
   projects: [
     {
       slug: "kero",
+      image: "/images/projects/kero.jpg",
       award: "Spot Award",
       name: "Kero",
       tagline: "Business Messaging Platform",
@@ -650,6 +707,7 @@ chunks = splitter.split_text(document)`,
     },
     {
       slug: "nobilex",
+      image: "/images/projects/nobilex.jpg",
       award: "Client accolades",
       name: "Nobilex",
       tagline: "Government Notary Portal",
@@ -678,6 +736,7 @@ chunks = splitter.split_text(document)`,
     },
     {
       slug: "tripsplit",
+      image: "/images/projects/tripsplit.jpg",
       name: "TripSplit",
       type: "personal",
       summary:
@@ -700,6 +759,7 @@ chunks = splitter.split_text(document)`,
     },
     {
       slug: "fitnesshub",
+      image: "/images/projects/fitnesshub.jpg",
       name: "FitnessHub",
       type: "personal",
       summary:
@@ -726,6 +786,7 @@ chunks = splitter.split_text(document)`,
     },
     {
       slug: "omg-ev",
+      image: "/images/projects/omg-ev.jpg",
       name: "OMG EV Vehicles",
       type: "personal",
       typeNote: "Freelance",

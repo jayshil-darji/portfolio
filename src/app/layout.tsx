@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Navbar } from "@/components/layout/navbar";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { MotionProvider } from "@/components/providers/motion-provider";
 import { profile } from "@/data/profile";
 import "./globals.css";
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <MotionProvider>
           <Navbar />
           {children}
+          <SiteFooter />
         </MotionProvider>
       </body>
     </html>

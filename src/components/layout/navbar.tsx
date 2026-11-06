@@ -6,6 +6,7 @@ import {
   useSyncExternalStore,
   type MouseEvent,
 } from "react";
+import { RotatingBorder } from "@/components/ui/rotating-border";
 import { SpotlightNavbar } from "@/components/ui/spotlight-navbar";
 import { NAV_ITEMS, SECTIONS } from "@/data/nav";
 import { profile } from "@/data/profile";
@@ -116,9 +117,11 @@ export function Navbar() {
           href="#hero"
           onClick={onBrandClick}
           aria-label={`${profile.name}, back to top`}
-          className="grid size-9 shrink-0 place-items-center justify-self-start rounded-lg border border-white/15 bg-white/5 text-xs font-bold tracking-tight text-foreground shadow-[0_0_16px_-4px_oklch(0.75_0.12_210/0.6)] transition-colors hover:border-white/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="relative grid size-9 shrink-0 place-items-center justify-self-start rounded-lg border border-white/15 bg-white/5 text-xs font-bold tracking-tight text-foreground shadow-[0_0_16px_-4px_oklch(0.75_0.12_210/0.6)] transition-colors hover:border-white/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <span aria-hidden="true">{initials}</span>
+          {/* Thin rotating frame over the 1px border (radius inherited). */}
+          <RotatingBorder inset="-1px" speed={6} startAngle={200} />
         </a>
 
         <SpotlightNavbar

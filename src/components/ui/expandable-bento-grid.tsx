@@ -23,6 +23,12 @@
  *    in `actions`, rendered OUTSIDE the button (no nested interactives).
  *  - forced document.body.style.overflow = "auto" on every change. Removed.
  *  - framer-motion → motion/react.
+ *  - Trigger restyling by state (`triggerClassName`, `headerClassName`,
+ *    item `triggerLabel`): e.g. a full-card trigger when collapsed and a
+ *    small labelled corner button when expanded; the region is then named
+ *    by the item title. `panelFade={false}` lets the expanded content
+ *    animate itself (e.g. a shared-layoutId cover must not fade while it
+ *    moves). `BENTO_LAYOUT_TRANSITION` is exported for such elements.
  * Kept: the item props (id/title/subtitle/description/content/icon/
  * className) as a simple fallback rendering.
  */
@@ -69,10 +75,23 @@ export interface BentoItem {
    */
   className?: string | ((state: BentoState) => string);
   /**
+   * LOCAL PATCH: decorative layer rendered as a direct child of the tile
+   * <li> (e.g. a RotatingBorder). Must be a direct child: the inner
+   * layout="position" wrapper is transformed during layout animations and
+   * would become the containing block of anything absolute inside it.
+   */
+  decoration?: (state: BentoState) => ReactNode;
+  /**
    * LOCAL PATCH: rich content for the trigger (always visible). Rendered
    * INSIDE a <button> → phrasing content only (spans, img), no links.
    */
   collapsed?: Renderable;
+  /**
+   * LOCAL PATCH: accessible name for the trigger <button> in a given state
+   * (e.g. "Collapse Kero" when it shrinks to an icon). Undefined → its
+   * text content.
+   */
+  triggerLabel?: (state: BentoState) => string | undefined;
   /** LOCAL PATCH: rich content of the expanded region (below the trigger). */
   expanded?: Renderable;
   /**
@@ -92,6 +111,15 @@ export interface ExpandableBentoGridProps {
   headingLevel?: "h3" | "h4";
   defaultExpandedId?: string | null;
   onExpandedChange?: (id: string | null) => void;
+  /** LOCAL PATCH: extra classes for the trigger <button>, by state. */
+  triggerClassName?: (state: BentoState) => string;
+  /** LOCAL PATCH: extra classes for the trigger's wrapper, by state. */
+  headerClassName?: (state: BentoState) => string;
+  /**
+   * LOCAL PATCH: fade the expanded region in/out (default true). False →
+   * the region appears at once and its content animates itself.
+   */
+  panelFade?: boolean;
 }
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -101,6 +129,8 @@ const LAYOUT: Transition = {
   damping: 32,
   mass: 0.9,
 };
+/** LOCAL PATCH: the tiles' layout spring, for shared elements inside. */
+export const BENTO_LAYOUT_TRANSITION = LAYOUT;
 
 const render = (r: Renderable | undefined, s: BentoState) =>
   typeof r === "function" ? r(s) : r;
@@ -112,6 +142,9 @@ export default function ExpandableBentoGrid({
   headingLevel: Heading = "h3",
   defaultExpandedId = null,
   onExpandedChange,
+  triggerClassName,
+  headerClassName,
+  panelFade = true,
 }: ExpandableBentoGridProps) {
   const [expandedId, setExpandedId] = useState<string | null>(
     defaultExpandedId,
@@ -189,6 +222,7 @@ export default function ExpandableBentoGrid({
             typeof item.className === "function"
               ? item.className(state)
               : item.className;
+          const label = item.triggerLabel?.(state);
 
           return (
             <motion.li
@@ -209,7 +243,7 @@ export default function ExpandableBentoGrid({
               <motion.div
                 layout="position"
                 transition={{ layout: layoutTransition }}
-                className="flex flex-1 flex-col"
+                className={cn("flex flex-1 flex-col", headerClassName?.(state))}
               >
                 <Heading className="m-0 flex flex-1 flex-col">
                   <button
@@ -221,8 +255,12 @@ export default function ExpandableBentoGrid({
                     type="button"
                     aria-expanded={expanded}
                     aria-controls={panelId}
+                    aria-label={label}
                     onClick={() => setExpanded(expanded ? null : item.id)}
-                    className="flex w-full flex-1 cursor-pointer flex-col text-left outline-none"
+                    className={cn(
+                      "flex w-full flex-1 cursor-pointer flex-col text-left outline-none",
+                      triggerClassName?.(state),
+                    )}
                   >
                     {render(item.collapsed, state) ?? (
                       <span className="flex items-center gap-3 p-4">
@@ -253,15 +291,21 @@ export default function ExpandableBentoGrid({
                     key="panel"
                     id={panelId}
                     role="region"
-                    aria-labelledby={btnId}
+                    // A trigger with its own aria-label (e.g. "Collapse X")
+                    // would mis-name the region: use the item title.
+                    {...(label
+                      ? { "aria-label": item.title }
+                      : { "aria-labelledby": btnId })}
                     layout="position"
-                    initial={{ opacity: 0, y: reduced ? 0 : 8 }}
+                    initial={
+                      panelFade ? { opacity: 0, y: reduced ? 0 : 8 } : false
+                    }
                     animate={{
                       opacity: 1,
                       y: 0,
                       transition: {
-                        duration: reduced ? 0 : 0.35,
-                        delay: reduced ? 0 : 0.12,
+                        duration: reduced || !panelFade ? 0 : 0.35,
+                        delay: reduced || !panelFade ? 0 : 0.12,
                         ease: EASE,
                       },
                     }}
@@ -281,6 +325,7 @@ export default function ExpandableBentoGrid({
                   </motion.div>
                 )}
               </AnimatePresence>
+              {item.decoration?.(state)}
             </motion.li>
           );
         })}

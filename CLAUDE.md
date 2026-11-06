@@ -49,16 +49,43 @@ the repo and is ours to maintain. Checklist:
 - Mark every change with a `LOCAL PATCH:` comment so re-adding the component
   (`--overwrite`) doesn't silently lose fixes.
 
-Installed + patched so far: `flip-text`, `animated-rays`, `morph-text`,
+Installed + patched so far: `flip-fade-text` (hero name loop; grapheme-safe,
+reserves the largest word's box, single-word replay, `alignTo` phase lock),
+`animated-rays`, `morph-text`,
 `stats-counter`, `stagger-text`, `border-beam`, `solar-system`,
 `interactive-particles`, `ascii-glitch-ripple`, `expandable-bento-grid`
 (largely rewritten: in-grid accordion expansion instead of upstream's
 modal; see its header), `spotlight-navbar` (controlled `activeIndex`),
 `creepy-button` (href support, CSS-driven), `social-flip-button`
-(CSS-driven, icons passed in).
+(CSS-driven, icons passed in, icon on both faces — no letter monograms;
+frame is a <div> whose border sweep is the shared RotatingBorder),
+`glow-border-card` (token colours, `animate="hover"`; wrapped by our
+`ui/interactive-glow-card.tsx` = ring + cursor highlight, shared by the
+Contact and Experience cards), `line-hover-link` (CSS moved to
+vengeance.css), `light-lines` (CSS
+keyframes instead of a rAF loop; Contact background),
+`expandable-bento-grid` also has a `decoration` slot (direct child of the
+tile <li>, e.g. a RotatingBorder).
+Our own shared primitives in `ui/`: `rotating-border.tsx` (rotating
+gradient frame — hero + Contact socials, navbar monogram, Currently cards,
+Skills detail card wrapper, project tiles; vary `startAngle`/`speed` per
+instance), `interactive-glow-card.tsx`.
+`magnetic-spotlight-marquee` (NOT in the registry — copied from source
+@ 298075b and rewritten as a text marquee; see its header),
+`staggered-grid` (Currently cards; written from the registry source, not
+`shadcn add`, which would install gsap — rewritten as a generic
+column-offset list with a middle-out entrance; see its header).
+Tried and not kept: `liquid-text` (WebGL canvas text: not accessible,
+131 KB gz with three.js, always-on render loop), `wave-grid-background`
+(three.js + 1,600 shadowed instanced cubes + post-processing, render loop
+never stops — lost to `light-lines` for the Contact background; evaluated
+from the registry JSON, never installed). The project has no GSAP
+dependency — port GSAP-based components to CSS/motion.
 Removed once unused (no dead code): `interactive-hover-button`,
-`animated-tooltip`, `glow-border-card`, and the Magnetic / Tilt
-primitives.
+`animated-tooltip`, the Magnetic / Tilt primitives, `gooey-text-reveal`
+(its SVG alpha-threshold filter rendered jagged, pixelated edges on large
+desktop text), `flip-text` (replaced by `flip-fade-text`),
+`animated-footer` (footer is now a slim © + "Back to top" row).
 
 **Don't blindly re-run `shadcn add` on an installed component** — it
 overwrites the file and silently drops every `LOCAL PATCH`. Diff the
@@ -88,12 +115,15 @@ src/
 ├── components/
 │   ├── about/             # About-section client parts (AboutPhoto)
 │   ├── backgrounds/       # Decorative animated backdrops (e.g. hero-background)
+│   ├── contact/           # Contact client parts (copy button, local time, reveal)
 │   ├── currently/         # Currently-section client parts (CurrentlyCards)
+│   ├── experience/        # Scroll-drawn milestone timeline
+│   ├── hero/              # Hero client parts (HeroName: name flips synced to the roles)
 │   ├── skills/            # Skills UI: explorer, filter tabs, chips, detail, code block
 │   ├── icons/             # Brand SVG icons (lucide v1 has no brand icons)
-│   ├── layout/            # Navbar (spotlight + scroll-spy), MobileMenu, Section + SectionHeading
+│   ├── layout/            # Navbar (spotlight + scroll-spy), MobileMenu, Section + SectionHeading, SiteFooter
 │   ├── motion/            # Reusable Motion primitives (ScrollRevealText)
-│   ├── projects/          # Projects UI: bento (+ span packing), generated covers
+│   ├── projects/          # Projects UI: bento (+ span packing), covers (image or generated)
 │   ├── providers/         # Client providers (MotionConfig, …)
 │   ├── sections/          # ONE component per page section (+ index.ts barrel)
 │   └── ui/                # shadcn / Vengeance UI components (CLI-managed)
@@ -101,23 +131,35 @@ src/
 │   ├── brand-colors.ts    # Brand colours (skills + socials) — the only place for brand hex values
 │   ├── nav.ts             # Section ids + nav items (navbar, mobile menu, headings)
 │   └── profile.ts         # ALL personal content (typed; "TODO…" = placeholder)
+├── fonts/                 # Self-hosted subset fonts for next/font/local (+ licences)
 ├── hooks/
 │   ├── use-active-section.ts          # scroll-spy (IntersectionObserver) + click lock
 │   ├── use-is-client.ts               # hydration-safe "mounted" flag
+│   ├── use-page-visible.ts            # tab visibility (pause ambient loops)
 │   └── use-prefers-reduced-motion.ts  # hydration-safe reduced-motion hook
 ├── lib/
 │   ├── skill-icons.tsx    # Skill logos (simple-icons + monograms) as an SVG sprite
 │   ├── skills-to-orbits.ts # profile.skills → SolarSystem rings + filter groups
+│   ├── social-items.tsx   # GitHub/LinkedIn/Email tiles (hero + contact)
 │   └── utils.ts           # cn() helper
 └── styles/
     ├── hero.css           # Hero entrance stagger + background layers
     ├── solar-system.css   # Scoped styles for the patched SolarSystem
+    ├── timeline.css       # Experience timeline (fill, nodes, card reveal)
     └── vengeance.css      # CSS that Vengeance UI components need but don't ship
 ```
 
 Sections (in order, each with matching `id`): `hero`, `about`, `currently`,
 `skills`, `experience`, `projects`, `contact`.
 
+## Assets
+
+- **Project images live in `public/images/projects/{slug}.jpg`;
+  recommended 1600×1000** (16:10 — every cover box is 16:10, so the image
+  shows uncropped). To use a real screenshot, overwrite the file: no code
+  change. The current files are generated placeholders (abstract covers in
+  the theme palette with the project name). `image` is set per project in
+  `profile.ts`; without it a CSS cover is generated.
 ## Rules
 
 1. **Content lives in one file.** All personal content — name, roles,
@@ -206,6 +248,34 @@ Sections (in order, each with matching `id`): `hero`, `about`, `currently`,
   scroll, `history.replaceState` hash, scroll-spy `lockTo`). Plain
   `<a href="#section">` links anywhere on the page are picked up by its
   delegated click listener automatically — no extra wiring needed.
+- Motion components keep inline values they've already applied: to switch
+  to a static state (e.g. reduced motion), pass explicit values
+  (`opacity: 1`), never `style={undefined}`.
+- Full-bleed section backgrounds: `<Section background={…}>` (outer full-width
+  wrapper + normal inner container). Contact uses `LightLines` there.
+  A full-bleed band inside the container (Contact marquee):
+  `ml-[calc(50%-50vw)] w-screen` — the section's `overflow-hidden` absorbs
+  the scrollbar-width overshoot of `100vw`.
+- `html { overflow-x: clip }` (globals.css) stops the page ever scrolling
+  sideways, but `scrollWidth` still reports overflow — test for it
+  (`scrollWidth > clientWidth`) and fix the component, don't rely on the
+  guard.
+- Tailwind v4 safe alignment: `justify-center-safe`, not
+  `justify-[safe_center]` (the arbitrary form is silently not generated).
+- SocialFlipButton: a `letter` front face is what every mouse/trackpad
+  device sees at rest (`@media (hover: none)` only flips touch devices to
+  the icon side). Leave `letter` out to show the icon on both faces.
+- motion's `useInView` only updates after an element has entered view, so
+  `initial` must match the real starting state (true only if on screen at
+  load).
+- Cache Components forbids `new Date()` etc. during static prerender; wrap it
+  in a `"use cache"` function with `cacheLife(…)` (see SiteFooter year).
+  Live, client-only values (e.g. the Contact clock) use
+  `useSyncExternalStore` with a `null` server snapshot + fixed-width
+  placeholder.
+- Testing: don't take `fullPage` screenshots in mobile-emulated contexts —
+  the giant temporary viewport makes three.js log `texImage3D` WebGL
+  warnings that real visitors can't trigger.
 - Section headings all use the shared stagger reveal (`<Section title>`);
   the ASCII glitch is reserved for inline keywords (About bio).
 - Expandable grids: never use `grid-auto-flow: dense` to fill holes (it
@@ -219,6 +289,34 @@ Sections (in order, each with matching `id`): `hero`, `about`, `currently`,
 - Testing scroll effects: drive the page with real wheel input
   (`page.mouse.wheel`), not `scrollTo()`. Programmatic scroll doesn't end the
   LCP measurement, so Next warns that below-the-fold images are the LCP.
+- Splitting text into per-letter spans: use grapheme clusters
+  (`Intl.Segmenter`), never `split("")` — Indic vowel signs (and emoji)
+  are separate code points and render broken in their own inline-block.
+- Two cycling text effects on screen (hero name loop + roles): phase-lock
+  them. `HeroName` passes FlipFadeText an `alignTo` anchor = the roles
+  MorphText's CSS animation `startTime` (Web Animations API), so the name
+  only flips inside a role's fully-visible window; the name period (7s) is
+  a whole multiple of the role period (3.5s).
+- Continuous decorative animations: animate `transform`, not an
+  `@property` value. RotatingBorder first animated a conic `from` angle
+  via `@property`: every ring restyled + repainted each frame on the main
+  thread (53 → 38 fps parked over 6 rings at 4× CPU throttle). Spinning a
+  pre-drawn conic square with `transform: rotate` (sized ≥ the diagonal
+  with `cqmax` units, masked to a ring) runs on the compositor — within
+  noise of no rings. (GlowBorderCard's @property ring only runs on hover.)
+- Dev-only DevTools Issues: 2× "DocumentCookie" performance issues come
+  from Next 16 itself (the Instant Navigation testing API's inline script
+  + the dev-tools overlay read `next-instant-navigation-testing`). Not in
+  production builds; no dev opt-out. Don't chase them — check prod with
+  CDP `Audits.issueAdded` instead.
+- Scroll-linked reveals: drive them from raw `scrollY` against measured
+  positions, not a spring-smoothed or clamped `scrollYProgress` (the spring
+  made cards lag their nodes; the clamp at 0 pre-revealed the first card).
+- Cycling text crossfades: make outgoing/incoming opacities complementary
+  (MorphText: in over 0–20% of a slot, out over the next word's 0–20%).
+  Fading both at once through the gooey threshold filter blanks the line.
+- Slide-in offsets must stay below the page gutter (`px-4` = 1rem on
+  mobile): a 1.5rem offset made unrevealed timeline cards overflow by 8px.
    - Use `next/image` and `next/font`; reserve space to keep CLS ≈ 0.
 5. **Dark theme is the default** (`class="dark"` on `<html>`). Use the shadcn
    tokens (`bg-background`, `text-muted-foreground`, …), not raw colours.

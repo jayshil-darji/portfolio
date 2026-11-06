@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { RotatingBorder } from "@/components/ui/rotating-border";
 import type { SkillItem } from "@/lib/skills-to-orbits";
 import { cn } from "@/lib/utils";
 import { CodeBlock } from "./code-block";
@@ -79,6 +80,13 @@ export function SkillDetail({
           </motion.p>
         )}
       </AnimatePresence>
+      {/* Rotating frame on the card wrapper only (wrapper = card box). */}
+      <RotatingBorder
+        radius="1rem"
+        opacity={0.5}
+        speed={8.5}
+        startAngle={300}
+      />
     </div>
   );
 }

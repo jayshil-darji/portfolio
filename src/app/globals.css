@@ -4,6 +4,7 @@
 @import "../styles/vengeance.css";
 @import "../styles/hero.css";
 @import "../styles/solar-system.css";
+@import "../styles/timeline.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -138,6 +139,11 @@
 /* ---------- Global motion / layout defaults ---------- */
 html {
   color-scheme: dark;
+  /* Guard: nothing may make the page horizontally scrollable (a sideways
+     trackpad swipe would shift every full-width block off the left edge).
+     `clip` (not `hidden`) on the root → viewport; position: sticky and
+     vertical scrolling are unaffected. Components still must not overflow. */
+  overflow-x: clip;
 }
 
 /* Sticky navbar height — header, anchor offset and hero pull-up share it. */
