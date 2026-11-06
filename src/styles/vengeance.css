@@ -1,0 +1,657 @@
+/*
+ * Vengeance UI component styles.
+ * Some registry items ship only the TSX and rely on global CSS that lives in
+ * the Vengeance UI repo (or is missing upstream entirely). Vendor that CSS
+ * here, one block per component. Keyframes are prefixed with `vui-` to avoid
+ * collisions. Every block has a prefers-reduced-motion fallback.
+ */
+
+/* ---------- FlipText (@vengeanceui/flip-text) ----------
+ * Each .flip-char is a mini cube: ::after = front face, ::before = bottom face.
+ * The char rotates 90deg on X so the bottom face rolls up into view.
+ *
+ * LOCAL FIX vs upstream: upstream animated both faces with one `fade`
+ * keyframe starting at opacity 1, so the bottom face was visible (folded
+ * under the glyph) for the whole cycle — on wrapped lines that showed as a
+ * duplicated/broken second row of letters. Faces now fade in/out in sync
+ * with the rotation, so exactly one face is visible at rest.
+ */
+/* Clip each word to its own line so the rolling cube faces never spill
+   above/below. overflow:hidden flattens the word's 3D content into its
+   plane (perspective still applies to the letters) and then clips it.
+   - perspective is in em so the 3D look is identical at every font size
+     (a fixed px value distorted large desktop text far more than mobile).
+   - padding-inline + equal negative margin widens the clip box so glyph
+     overhangs (e.g. the hook of "J") aren't cut, without changing layout. */
+.flip-text-wrapper .word {
+  overflow: hidden;
+  vertical-align: top;
+  perspective: 8em;
+  padding-inline: 0.12em;
+  margin-inline: -0.12em;
+}
+
+/* Upstream's &nbsp; spacer collapses to ~0.2em with tight tracking. */
+.flip-text-wrapper .whitespace {
+  min-width: 0.3em;
+}
+
+/* LOCAL FIX: the cube is pushed back by half its depth (translateZ(-0.6em))
+   so the front face rests exactly at Z=0. Upstream left it 0.6em toward the
+   viewer, so perspective magnified every glyph and pushed edge letters
+   outward — on desktop this ate the word gap ("JayshilDarji") and pushed
+   the "J" past the clip. Applied in the base style too, so the static
+   reduced-motion state is also true-size. */
+.flip-char {
+  color: inherit;
+  -webkit-text-fill-color: transparent;
+  height: 1.2em;
+  line-height: 1.2em;
+  vertical-align: middle;
+  transform: translateZ(-0.6em);
+  animation: vui-flip var(--flip-duration, 2.2s) var(--flip-delay, 0s)
+    var(--flip-iteration, infinite) ease;
+}
+
+.flip-char::before,
+.flip-char::after {
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+  content: attr(data-char);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+}
+
+/* Front face: visible at rest, fades out as it rolls away. */
+.flip-char::after {
+  transform: translate(-50%, -50%) translateZ(0.6em);
+  animation: vui-face-out var(--flip-duration, 2.2s) var(--flip-delay, 0s)
+    var(--flip-iteration, infinite) ease;
+}
+
+/* Bottom face: hidden at rest, fades in as it rolls up to the front. */
+.flip-char::before {
+  transform: translate(-50%, -50%) rotateX(-90deg) translateZ(0.6em);
+  opacity: 0;
+  animation: vui-face-in var(--flip-duration, 2.2s) var(--flip-delay, 0s)
+    var(--flip-iteration, infinite) ease;
+}
+
+@keyframes vui-flip {
+  0% {
+    transform: translateZ(-0.6em) rotateX(0deg);
+  }
+  25%,
+  100% {
+    transform: translateZ(-0.6em) rotateX(90deg);
+  }
+}
+
+@keyframes vui-face-out {
+  0%,
+  5% {
+    opacity: 1;
+  }
+  25%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes vui-face-in {
+  0%,
+  5% {
+    opacity: 0;
+  }
+  25%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-char,
+  .flip-char::before,
+  .flip-char::after {
+    animation: none !important;
+  }
+}
+
+/* ---------- AnimatedRays (@vengeanceui/animated-rays) ----------
+ * Upstream references `animate-aurora-bg` and `--stripe-color` but defines
+ * neither (they only exist inside aurora-hero). Ported from aurora-hero.
+ * Black stripes + saturate filter = coloured rays on a dark background.
+ */
+.vui-rays {
+  --stripe-color: #000;
+}
+
+.animate-aurora-bg {
+  animation: vui-aurora-bg 60s linear infinite;
+}
+
+/* Paused when the hero is off-screen (set by HeroBackground). */
+[data-paused="true"] .animate-aurora-bg {
+  animation-play-state: paused;
+}
+
+@keyframes vui-aurora-bg {
+  from {
+    background-position:
+      50% 50%,
+      50% 50%;
+  }
+  to {
+    background-position:
+      350% 50%,
+      350% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora-bg {
+    animation: none !important;
+  }
+}
+
+/* ---------- MorphText (@vengeanceui/morph-text) ----------
+ * Words are inline-styled `opacity: 0` and revealed only by animation, so a
+ * reduced-motion user would otherwise see nothing. Show the first word only.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .morph-word {
+    animation: none !important;
+    filter: none !important;
+  }
+  .morph-word:first-child {
+    opacity: 1 !important;
+  }
+}
+
+/* ---------- BorderBeam (@vengeanceui/border-beam) ----------
+ * Upstream defined this in a <style jsx> block, which scoped (renamed) it.
+ */
+@keyframes vui-border-beam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-border-beam]::after {
+    animation: none !important;
+    display: none;
+  }
+}
+
+/* ---------- AsciiGlitchRipple (@vengeanceui/ascii-glitch-ripple) ----------
+ * LOCAL PATCH: while scrambling, the real text keeps its space (and stays in
+ * the accessibility tree) but is painted transparent; the aria-hidden
+ * overlay draws the scrambled glyphs on top. Underlines with an explicit
+ * text-decoration-color stay visible.
+ */
+.agr[data-scrambling] > .agr-text {
+  color: transparent;
+}
+
+.agr-overlay {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+/* ---------- SpotlightNavbar (@vengeanceui/spotlight-navbar) ----------
+ * LOCAL PATCH: upstream relied on styled-jsx plus Vengeance globals that
+ * aren't shipped with the registry item (and were defined twice there with
+ * conflicting values — the second made the glass opaque). Dark-only here,
+ * tinted to the site accent.
+ */
+.spotlight-nav {
+  --spotlight-color: oklch(1 0 0 / 0.14);
+  --ambience-color: oklch(0.86 0.09 220);
+  background: var(--glass-surface);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 10px 15px -3px oklch(0 0 0 / 0.45),
+    0 4px 6px -4px oklch(0 0 0 / 0.45);
+}
+
+/* Pointer / keyboard-focus spotlight. */
+.spotlight-nav-spotlight {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  background: radial-gradient(
+    120px circle at var(--spotlight-x, 50%) 100%,
+    var(--spotlight-color) 0%,
+    transparent 50%
+  );
+}
+.spotlight-nav[data-spotlight="on"] > .spotlight-nav-spotlight {
+  opacity: 1;
+}
+
+/* Active item: thin glowing line (upstream) + a soft halo above it. */
+.spotlight-nav-ambience {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  background:
+    radial-gradient(
+        60px circle at var(--ambience-x, 50%) 0%,
+        var(--ambience-color) 0%,
+        transparent 100%
+      )
+      bottom / 100% 2px no-repeat,
+    radial-gradient(
+      44px 22px at var(--ambience-x, 50%) 100%,
+      color-mix(in oklch, var(--ambience-color) 22%, transparent),
+      transparent
+    );
+}
+.spotlight-nav[data-has-active="true"] > .spotlight-nav-ambience {
+  opacity: 1;
+}
+
+/* ---------- CreepyButton (@vengeanceui/creepy-button) ----------
+ * LOCAL PATCH: cover lift, blink and the touch "peek" are CSS (upstream
+ * used framer-motion + React state). Colours from theme tokens.
+ */
+.creepy {
+  --eye-x: 0;
+  --eye-y: 0;
+  position: relative;
+  display: inline-block;
+  min-width: 10em;
+  border-radius: 0.875rem;
+  background: var(--background);
+  box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.08);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.creepy:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px oklch(1 0 0 / 0.08),
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--ring);
+}
+
+.creepy-eyes {
+  position: absolute;
+  right: 1em;
+  bottom: 0.55em;
+  z-index: 0;
+  display: flex;
+  height: 0.75em;
+  align-items: center;
+  gap: 0.375em;
+  pointer-events: none;
+}
+.creepy-eye {
+  position: relative;
+  width: 0.75em;
+  height: 0.75em;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--foreground);
+  animation: creepy-blink 3s linear infinite;
+}
+.creepy-pupil {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.375em;
+  height: 0.375em;
+  border-radius: 9999px;
+  background: var(--background);
+  transform: translate(
+    calc(-50% + var(--eye-x) * 50%),
+    calc(-50% + var(--eye-y) * 50%)
+  );
+  transition: transform 75ms ease-out;
+}
+
+.creepy-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  padding: 0 1.5em;
+  white-space: nowrap;
+  border-radius: inherit;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--foreground);
+  /* Opaque "dark glass": must hide the eyes until it lifts. */
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--brand-teal) 16%, transparent),
+      color-mix(in oklch, var(--brand-violet) 16%, transparent)
+    ),
+    var(--card);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--brand-blue) 55%, transparent),
+    inset 0 1px 0 oklch(1 0 0 / 0.08),
+    0 10px 30px -12px color-mix(in oklch, var(--brand-blue) 70%, transparent);
+  transform-origin: 1.25em 50%;
+  transition:
+    rotate 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s;
+}
+/* Mirrors the cover's layout (flex + gap) so the button is sized for exactly
+   what the cover shows — otherwise the cover's icon gap made the label wrap. */
+.creepy-size {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  white-space: nowrap;
+  padding: 0.85em 1.5em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  visibility: hidden;
+}
+
+/* Lift on hover (mouse devices only — no sticky hover after a tap) and on
+   keyboard focus. */
+@media (hover: hover) {
+  .creepy:hover .creepy-cover {
+    rotate: -12deg;
+  }
+}
+.creepy:focus-visible .creepy-cover {
+  rotate: -12deg;
+}
+.creepy:is(:hover, :focus-visible) .creepy-cover {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklch, var(--brand-teal) 70%, transparent),
+    inset 0 1px 0 oklch(1 0 0 / 0.1),
+    0 14px 40px -10px color-mix(in oklch, var(--brand-violet) 75%, transparent);
+}
+
+/* Touch: periodic peek — cover lifts, eyes look around, then settles. */
+@media (hover: none) {
+  .creepy-cover {
+    animation: creepy-peek 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+    animation-delay: 2.5s;
+  }
+  .creepy-pupil {
+    animation: creepy-look 6s ease-in-out infinite;
+    animation-delay: 2.5s;
+  }
+}
+
+@keyframes creepy-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.05);
+  }
+}
+@keyframes creepy-peek {
+  0%,
+  55%,
+  100% {
+    rotate: 0deg;
+  }
+  62%,
+  90% {
+    rotate: -12deg;
+  }
+}
+@keyframes creepy-look {
+  0%,
+  62% {
+    translate: 0 0;
+  }
+  68% {
+    translate: -45% 0;
+  }
+  76% {
+    translate: 45% -25%;
+  }
+  84%,
+  100% {
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .creepy-eye,
+  .creepy-pupil,
+  .creepy-cover {
+    animation: none !important;
+  }
+  .creepy-pupil {
+    transform: translate(-50%, -50%) !important;
+    translate: none !important;
+  }
+}
+
+/* ---------- SocialFlipButton (@vengeanceui/social-flip-button) ----------
+ * LOCAL PATCH: CSS-only flip / stagger / tooltip / border sweep, 44px
+ * tiles, keyboard + touch + reduced-motion states.
+ * Colours: idle = neutral glass (navbar-pill surface) + light-grey glyphs;
+ * hover / focus-visible / tap = the tile's brand colour via --brand (set
+ * per tile from src/data/brand-colors.ts) using the SAME highlight recipe
+ * as the solar-system planets (--brand-glow-* tokens) — one rule set for
+ * every platform.
+ */
+.social-flip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid oklch(1 0 0 / 0.1);
+  background: oklch(1 0 0 / 0.03);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+/* Border sweep: a highlight travels along a 1px strip (no overflow clip,
+   so tooltips can sit above the group). */
+.social-flip::before,
+.social-flip::after {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--brand-blue) 80%, white),
+      transparent
+    )
+    no-repeat;
+  background-size: 40% 100%;
+  animation: social-sweep 2.5s linear infinite;
+}
+.social-flip::before {
+  top: -1px;
+}
+.social-flip::after {
+  bottom: -1px;
+  animation-direction: reverse;
+}
+
+.social-flip-item {
+  --brand: var(--foreground);
+  position: relative;
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  perspective: 1000px;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.social-flip-item:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--ring);
+}
+.social-flip-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: rotate 0.7s cubic-bezier(0.34, 1.45, 0.64, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+.social-flip-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-surface);
+  color: var(--muted-foreground);
+  backface-visibility: hidden;
+}
+.social-flip-front {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.social-flip-back {
+  rotate: y 180deg;
+  /* Colour change runs alongside the 0.7s flip. */
+  transition:
+    color 0.6s ease,
+    border-color 0.6s ease,
+    box-shadow 0.6s ease;
+}
+.social-flip-back svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+/* Brand highlight — hover (pointer devices only: no stuck hover after a
+   tap on iOS), keyboard focus, and tap (:active). */
+@media (hover: hover) {
+  .social-flip-item:hover .social-flip-back {
+    color: var(--brand);
+    border-color: var(--brand);
+    box-shadow:
+      var(--brand-glow-shade),
+      0 0 var(--brand-glow-blur)
+        color-mix(in oklch, var(--brand) var(--brand-glow-mix), transparent);
+  }
+}
+.social-flip-item:is(:focus-visible, :active) .social-flip-back {
+  color: var(--brand);
+  border-color: var(--brand);
+  box-shadow:
+    var(--brand-glow-shade),
+    0 0 var(--brand-glow-blur)
+      color-mix(in oklch, var(--brand) var(--brand-glow-mix), transparent);
+}
+
+/* Flip the whole group on hover (mouse) or keyboard focus inside it. */
+@media (hover: hover) {
+  .social-flip:hover .social-flip-card {
+    rotate: y 180deg;
+  }
+}
+.social-flip:focus-within .social-flip-card {
+  rotate: y 180deg;
+}
+
+.social-flip-tooltip {
+  position: absolute;
+  bottom: calc(100% + 0.6rem);
+  left: 50%;
+  z-index: 10;
+  translate: -50% 6px;
+  white-space: nowrap;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.5rem;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    translate 0.2s;
+}
+@media (hover: hover) {
+  .social-flip-item:hover .social-flip-tooltip {
+    opacity: 1;
+    translate: -50% 0;
+  }
+}
+.social-flip-item:focus-visible .social-flip-tooltip {
+  opacity: 1;
+  translate: -50% 0;
+}
+
+/* Touch: rest on the icon side (there is no hover to reveal it). */
+@media (hover: none) {
+  .social-flip-card {
+    rotate: y 180deg;
+    transition: none;
+  }
+}
+
+@keyframes social-sweep {
+  from {
+    background-position: -60% 0;
+  }
+  to {
+    background-position: 160% 0;
+  }
+}
+
+/* Reduced motion: no flip — icon face only; the brand colour/glow just
+   fades in. (Overrides the global "transition-duration: 0.01ms" net for
+   these colour-only properties.) */
+@media (prefers-reduced-motion: reduce) {
+  .social-flip::before,
+  .social-flip::after {
+    animation: none;
+    display: none;
+  }
+  .social-flip-card {
+    rotate: none !important;
+    transition: none !important;
+  }
+  .social-flip-front {
+    display: none;
+  }
+  .social-flip-back {
+    rotate: none;
+    transition-duration: 0.3s !important;
+  }
+}

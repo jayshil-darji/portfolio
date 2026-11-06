@@ -1,0 +1,393 @@
+/*
+ * Vengeance UI — Solar System (src/components/ui/solar-system.tsx)
+ *
+ * LOCAL PATCH: upstream injected these rules through a
+ * <style dangerouslySetInnerHTML> on every render and set --radius-* on
+ * :root with fixed px breakpoints. They now live here, scoped to .ss-root,
+ * keyframes prefixed `ss-`, and radii scale continuously with the container
+ * width via container-query units (no JS, no hydration risk).
+ */
+
+/* The container is what `cqw` resolves against. */
+.ss-container {
+  container-type: inline-size;
+  width: 100%;
+}
+
+.ss-root {
+  /* 1 design-px at the design width (default 940), less when narrower. */
+  --ss-unit: calc(min(100cqw, var(--ss-design-px)) / var(--ss-design));
+  --ss-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* Height = projected (tilted) outer ellipse + room for planet cards.
+     Constants measured from the projected bounds across a full revolution. */
+  height: calc(
+    (var(--ss-maxr) * 2 * cos(var(--ss-tilt)) + 140) * var(--ss-unit) + 40px
+  );
+  perspective: var(--ss-perspective, 1200px);
+  user-select: none;
+}
+
+.ss-stage {
+  position: absolute;
+  /* Perspective makes the near half of the ellipse taller than the far
+     half; shift the centre up so the drawing is vertically balanced. */
+  inset: calc(50% - 0.085 * var(--ss-maxr) * var(--ss-unit)) auto auto 50%;
+  width: 0;
+  height: 0;
+  transform: rotateX(var(--ss-tilt)) rotateY(-10deg);
+  transform-style: preserve-3d;
+}
+
+/* ---------- Sun ---------- */
+.ss-sun {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: calc(130 * var(--ss-unit));
+  height: calc(130 * var(--ss-unit));
+  transform: translate(-50%, -50%) rotateY(10deg)
+    rotateX(calc(-1 * var(--ss-tilt)));
+  transform-style: preserve-3d;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.ss-sun > * {
+  grid-area: 1 / 1;
+}
+
+.ss-sun-aura {
+  width: 92%;
+  height: 92%;
+  border-radius: 9999px;
+  background: oklch(0.7 0.13 200 / 0.22);
+  filter: blur(14px);
+  animation: ss-sun-pulse 4s ease-in-out infinite alternate;
+}
+
+.ss-sun-core {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(84 * var(--ss-unit));
+  height: calc(84 * var(--ss-unit));
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: 9999px;
+  border: 2px solid oklch(0.75 0.12 195 / 0.45);
+  background: oklch(0.16 0.01 260);
+  box-shadow: 0 0 30px oklch(0.7 0.13 195 / 0.3);
+}
+
+.ss-sun-ring {
+  border-radius: 9999px;
+  border: 1px dashed oklch(0.75 0.12 195 / 0.2);
+}
+
+/* Accessory rings lie in the orbit plane (re-tilted inside the billboarded
+   sun) and spin within it, as upstream. */
+.ss-sun-ring--a {
+  width: 108%;
+  height: 108%;
+  animation: ss-sun-spin 20s linear infinite;
+}
+
+.ss-sun-ring--b {
+  width: 142%;
+  height: 142%;
+  border-color: oklch(0.75 0.12 195 / 0.1);
+  animation: ss-sun-spin 30s linear infinite reverse;
+}
+
+/* ---------- Rings ---------- */
+.ss-ring {
+  --radius: calc(var(--r) * var(--ss-unit));
+  --enter-delay: calc(var(--i) * 110ms);
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-style: preserve-3d;
+}
+
+.ss-ring-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(2 * var(--radius));
+  height: calc(2 * var(--radius));
+  translate: -50% -50%;
+  border-radius: 9999px;
+  border: 1px solid oklch(1 0 0 / 0.09);
+  pointer-events: none;
+  transition:
+    border-color 0.4s,
+    box-shadow 0.4s;
+}
+
+.ss-ring[data-variant="muted"] .ss-ring-line {
+  border-style: dashed;
+  border-color: oklch(1 0 0 / 0.07);
+}
+
+.ss-ring[data-active] .ss-ring-line {
+  border-color: oklch(0.8 0.1 220 / 0.45);
+  box-shadow: 0 0 24px oklch(0.7 0.13 230 / 0.15);
+}
+
+/* ---------- Planets ---------- */
+/* Carrier: revolves around the sun. */
+.ss-orbiter {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  animation: ss-orbit var(--dur) linear var(--delay) infinite;
+  animation-direction: var(--dir, normal);
+}
+
+/* Billboard: counter-rotates so the card always faces the viewer. */
+.ss-planet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  outline: none;
+  animation: ss-billboard var(--dur) linear var(--delay) infinite;
+  animation-direction: var(--dir, normal);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Visual card (flat child — safe to fade/scale without breaking 3D). */
+.ss-face {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0.38rem 0.8rem 0.38rem 0.55rem;
+  border-radius: 9999px;
+  border: 1px solid oklch(1 0 0 / 0.09);
+  background: oklch(0.14 0.005 260 / 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    0 4px 20px oklch(0 0 0 / 0.4),
+    inset 0 1px 0 oklch(1 0 0 / 0.05);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: oklch(0.96 0 0);
+  transition:
+    opacity 0.35s,
+    border-color 0.3s,
+    box-shadow 0.3s,
+    scale 0.3s var(--ss-ease);
+}
+
+.ss-ring[data-variant="muted"] .ss-face {
+  border-style: dashed;
+  color: oklch(0.82 0 0);
+  background: oklch(0.14 0.005 260 / 0.55);
+}
+
+.ss-icon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: var(--c);
+  flex-shrink: 0;
+}
+
+.ss-planet:hover .ss-face,
+.ss-planet:focus-visible .ss-face,
+.ss-planet[aria-pressed="true"] .ss-face {
+  border-color: var(--c);
+  /* Shared recipe (globals.css --brand-glow-*), also used by the socials. */
+  box-shadow:
+    var(--brand-glow-shade),
+    0 0 var(--brand-glow-blur)
+      color-mix(in oklch, var(--c) var(--brand-glow-mix), transparent);
+  scale: 1.06;
+  opacity: 1;
+}
+
+.ss-planet:focus-visible .ss-face {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 3px;
+}
+
+/* Laser from the sun to a hovered / focused / selected planet. */
+.ss-laser {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: var(--radius);
+  height: 1.5px;
+  translate: 0 -50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(1 0 0 / 0.15) 20%,
+    var(--c) 80%,
+    var(--c) 100%
+  );
+  box-shadow: 0 0 8px var(--c);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.ss-orbiter:has(
+    .ss-planet:hover,
+    .ss-planet:focus-visible,
+    .ss-planet[aria-pressed="true"]
+  )
+  .ss-laser {
+  opacity: 1;
+}
+
+/* Filter: planets outside the highlighted set recede. */
+.ss-root[data-filtering] .ss-orbiter:not([data-highlight]) .ss-face {
+  opacity: 0.2;
+}
+.ss-root[data-filtering] .ss-ring:not([data-active]) .ss-ring-line {
+  border-color: oklch(1 0 0 / 0.04);
+}
+
+/* ---------- Cosmic dust ---------- */
+.ss-dust {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--c);
+  box-shadow: 0 0 6px var(--c);
+  opacity: 0.4;
+  pointer-events: none;
+  animation: ss-orbit var(--dur) linear var(--delay) infinite;
+}
+
+/* ---------- Pausing ----------
+ * Off-screen / hidden tab (data-paused), or while a planet is hovered or
+ * keyboard-focused so it's easy to click. */
+.ss-root[data-paused="true"]
+  :is(.ss-orbiter, .ss-planet, .ss-dust, .ss-sun-aura, .ss-sun-ring),
+.ss-root:has(.ss-planet:hover, .ss-planet:focus-visible)
+  :is(.ss-orbiter, .ss-planet, .ss-dust) {
+  animation-play-state: paused;
+}
+
+/* ---------- Entrance (rings expand + planets pop, staggered by ring) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .ss-root:not([data-revealed="true"]) :is(.ss-ring-line, .ss-face, .ss-sun) {
+    opacity: 0;
+  }
+  .ss-root[data-revealed="true"] .ss-sun {
+    animation: ss-fade-in 0.8s var(--ss-ease) backwards;
+  }
+  .ss-root[data-revealed="true"] .ss-ring-line {
+    animation: ss-ring-in 1.1s var(--ss-ease) var(--enter-delay) backwards;
+  }
+  .ss-root[data-revealed="true"] .ss-face {
+    animation: ss-face-in 0.7s var(--ss-ease) calc(var(--enter-delay) + 250ms)
+      backwards;
+  }
+}
+
+/* ---------- Reduced motion: static layout, still interactive ----------
+ * Planets keep their distributed positions (negative delays) but never move.
+ * Overrides the global "animation-duration: 0.01ms" safety net, which would
+ * otherwise snap every planet to the same end position. */
+@media (prefers-reduced-motion: reduce) {
+  .ss-root :is(.ss-orbiter, .ss-planet) {
+    animation-duration: var(--dur) !important;
+    animation-iteration-count: infinite !important;
+    animation-play-state: paused !important;
+  }
+  .ss-root :is(.ss-sun-aura, .ss-sun-ring) {
+    animation: none !important;
+  }
+  .ss-root .ss-dust {
+    display: none;
+  }
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes ss-orbit {
+  from {
+    transform: rotateZ(0deg) translateX(var(--radius));
+  }
+  to {
+    transform: rotateZ(-360deg) translateX(var(--radius));
+  }
+}
+
+/* Cancels the orbit rotation and the stage tilt so cards face the viewer. */
+@keyframes ss-billboard {
+  from {
+    transform: translate(-50%, -50%) rotateZ(0deg) rotateY(10deg)
+      rotateX(calc(-1 * var(--ss-tilt)));
+  }
+  to {
+    transform: translate(-50%, -50%) rotateZ(360deg) rotateY(10deg)
+      rotateX(calc(-1 * var(--ss-tilt)));
+  }
+}
+
+@keyframes ss-sun-pulse {
+  from {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes ss-sun-spin {
+  from {
+    transform: rotateX(var(--ss-tilt)) rotateY(-10deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(var(--ss-tilt)) rotateY(-10deg) rotateZ(360deg);
+  }
+}
+
+@keyframes ss-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ss-ring-in {
+  from {
+    opacity: 0;
+    scale: 0.55;
+  }
+}
+
+@keyframes ss-face-in {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+}

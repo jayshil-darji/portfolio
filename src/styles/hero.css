@@ -1,0 +1,122 @@
+/*
+ * Hero animations. Pure CSS on purpose:
+ * - runs from first paint, before hydration (the <h1> is the LCP element and
+ *   shouldn't wait for JS to become visible);
+ * - server and client markup are identical (no hydration risk).
+ * Only transform / opacity / filter are animated.
+ */
+
+/* ---------- Staggered entrance ---------- */
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.hero-reveal {
+  animation: hero-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* ---------- Cycling roles (MorphText) ---------- */
+.hero-roles {
+  color: oklch(0.86 0.1 220);
+}
+
+/* ---------- Background layers ---------- */
+/* Aurora rays: dimmed so the name is the brightest element; fades in on
+   mount (AnimatedRays renders after hydration). `from`-only keyframes
+   animate up to the element's own opacity. */
+.hero-rays {
+  opacity: 0.45;
+  animation: hero-fade 1.6s ease-out both;
+}
+
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The upstream effect uses mix-blend-mode: difference, which produces
+   complementary greens/oranges/reds. This `color` blend layer keeps the
+   rays' brightness but forces their hue into teal → blue → violet. */
+.hero-rays-tint {
+  background: linear-gradient(
+    100deg,
+    var(--brand-teal) 0%,
+    var(--brand-blue) 50%,
+    var(--brand-violet) 100%
+  );
+  mix-blend-mode: color;
+}
+
+/* Receding grid floor: one element, two gradients, a 3D tilt and a mask. */
+.hero-grid {
+  background-image:
+    linear-gradient(to right, oklch(1 0 0 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center top;
+  transform: perspective(600px) rotateX(55deg) scale(2);
+  transform-origin: center top;
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 0%, black 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 0%, black 0%, transparent 70%);
+}
+
+.hero-glow {
+  background:
+    radial-gradient(40% 35% at 15% 85%, oklch(0.55 0.2 290 / 0.18), transparent 70%),
+    radial-gradient(45% 40% at 50% 45%, oklch(0.6 0.15 240 / 0.1), transparent 70%);
+}
+
+/* ---------- Small details ---------- */
+@keyframes hero-ping {
+  75%,
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.hero-ping,
+.live-ping {
+  animation: hero-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes hero-scroll {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+}
+
+.hero-scroll-dot {
+  animation: hero-scroll 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* ---------- Reduced motion: everything static and visible ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .hero-reveal,
+  .hero-rays,
+  .hero-ping,
+  .live-ping,
+  .hero-scroll-dot {
+    animation: none !important;
+  }
+}
