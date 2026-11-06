@@ -55,10 +55,10 @@ Installed + patched so far: `flip-text`, `animated-rays`, `morph-text`,
 (largely rewritten: in-grid accordion expansion instead of upstream's
 modal; see its header), `spotlight-navbar` (controlled `activeIndex`),
 `creepy-button` (href support, CSS-driven), `social-flip-button`
-(CSS-driven, icons passed in).
+(CSS-driven, icons passed in), `glow-border-card` (re-added for the
+Experience timeline: token colours, `animate="hover"`).
 Removed once unused (no dead code): `interactive-hover-button`,
-`animated-tooltip`, `glow-border-card`, and the Magnetic / Tilt
-primitives.
+`animated-tooltip`, and the Magnetic / Tilt primitives.
 
 **Don't blindly re-run `shadcn add` on an installed component** — it
 overwrites the file and silently drops every `LOCAL PATCH`. Diff the
@@ -89,6 +89,7 @@ src/
 │   ├── about/             # About-section client parts (AboutPhoto)
 │   ├── backgrounds/       # Decorative animated backdrops (e.g. hero-background)
 │   ├── currently/         # Currently-section client parts (CurrentlyCards)
+│   ├── experience/        # Scroll-drawn milestone timeline
 │   ├── skills/            # Skills UI: explorer, filter tabs, chips, detail, code block
 │   ├── icons/             # Brand SVG icons (lucide v1 has no brand icons)
 │   ├── layout/            # Navbar (spotlight + scroll-spy), MobileMenu, Section + SectionHeading
@@ -112,6 +113,7 @@ src/
 └── styles/
     ├── hero.css           # Hero entrance stagger + background layers
     ├── solar-system.css   # Scoped styles for the patched SolarSystem
+    ├── timeline.css       # Experience timeline (fill, nodes, card reveal)
     └── vengeance.css      # CSS that Vengeance UI components need but don't ship
 ```
 
@@ -206,6 +208,9 @@ Sections (in order, each with matching `id`): `hero`, `about`, `currently`,
   scroll, `history.replaceState` hash, scroll-spy `lockTo`). Plain
   `<a href="#section">` links anywhere on the page are picked up by its
   delegated click listener automatically — no extra wiring needed.
+- Motion components keep inline values they've already applied: to switch
+  to a static state (e.g. reduced motion), pass explicit values
+  (`opacity: 1`), never `style={undefined}`.
 - Section headings all use the shared stagger reveal (`<Section title>`);
   the ASCII glitch is reserved for inline keywords (About bio).
 - Expandable grids: never use `grid-auto-flow: dense` to fill holes (it

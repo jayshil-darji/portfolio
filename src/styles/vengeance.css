@@ -175,6 +175,57 @@
   }
 }
 
+/* ---------- GlowBorderCard (@vengeanceui/glow-border-card) ----------
+ * LOCAL PATCH: CSS from the Vengeance UI repo's globals (not shipped with
+ * the registry item). @property makes the conic angle animatable. The
+ * rotation repaints every frame, so data-glow-animate="hover" only runs it
+ * while the card is hovered / focused within.
+ */
+@property --glow-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes glow-angle-rotate {
+  to {
+    --glow-angle: 1turn;
+  }
+}
+
+.glow-conic {
+  border-image: conic-gradient(
+      from var(--glow-angle),
+      var(--glow-color-1),
+      var(--glow-color-2),
+      var(--glow-color-3),
+      var(--glow-color-4),
+      var(--glow-color-5),
+      var(--glow-color-6),
+      var(--glow-color-7),
+      var(--glow-color-8),
+      var(--glow-color-9),
+      var(--glow-color-10),
+      var(--glow-color-1)
+    )
+    1;
+  animation: glow-angle-rotate var(--glow-animation-duration, 4s) linear
+    infinite;
+}
+.glow-card[data-glow-animate="never"] .glow-conic,
+.glow-card[data-glow-animate="hover"] .glow-conic {
+  animation-play-state: paused;
+}
+.glow-card[data-glow-animate="hover"]:is(:hover, :focus-within) .glow-conic {
+  animation-play-state: running;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-conic {
+    animation: none !important;
+  }
+}
+
 /* ---------- BorderBeam (@vengeanceui/border-beam) ----------
  * Upstream defined this in a <style jsx> block, which scoped (renamed) it.
  */

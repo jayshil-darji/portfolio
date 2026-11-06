@@ -4,6 +4,7 @@
 @import "../styles/vengeance.css";
 @import "../styles/hero.css";
 @import "../styles/solar-system.css";
+@import "../styles/timeline.css";
 
 @custom-variant dark (&:is(.dark *));
 

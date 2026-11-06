@@ -68,19 +68,38 @@ export interface SkillGroup {
   skills: Skill[];
 }
 
-export interface ExperienceItem {
+/** Icon shown on a milestone's award chip. */
+export type MilestoneIcon = "trophy" | "medal";
+
+/** A notable piece of work within a role. No dates — order is enough. */
+export interface Milestone {
+  title: string;
+  text: string;
+  /** Award / recognition, shown as a small chip. */
+  badge?: string;
+  icon?: MilestoneIcon;
+}
+
+export interface ExperienceRole {
+  kind: "role";
   company: string;
   role: string;
-  location?: string;
-  /** "YYYY" or "YYYY-MM" */
+  /** "YYYY" */
   start: string;
-  /** "YYYY", "YYYY-MM" or "present" */
-  end: string | "present";
+  /** "YYYY" or "present" */
+  end: string;
   summary?: string;
-  highlights: string[];
-  tech: string[];
-  url?: string;
+  milestones: Milestone[];
 }
+
+/** The open-ended "what I'm doing now" entry at the end of the timeline. */
+export interface ExperienceNow {
+  kind: "now";
+  title: string;
+  text: string;
+}
+
+export type ExperienceEntry = ExperienceRole | ExperienceNow;
 
 export type ProjectType = "professional" | "personal";
 
@@ -153,7 +172,8 @@ export interface Profile {
   skillsIntro: { title: string; description: string };
   /** Ring order = inner → outer in the Skills orbit. */
   skills: SkillGroup[];
-  experience: ExperienceItem[];
+  /** Timeline, oldest → newest. */
+  experience: ExperienceEntry[];
   projects: Project[];
   socials: SocialLink[];
   seo: {
@@ -601,24 +621,40 @@ chunks = splitter.split_text(document)`,
   ],
   experience: [
     {
-      company: "Cygnet.One",
-      role: "Senior Software Engineer",
-      start: "2020",
-      end: "present",
-      highlights: [
-        "Spot Award for remarkable contribution to the Kero messaging platform",
-        "Accolades for delivery on the Nobilex government notary portal",
-        "Lead frontend development, mentor junior developers, own code reviews and the release process",
-      ],
-      tech: [],
-    },
-    {
+      kind: "role",
       company: "Brainvire",
       role: "Software Engineer",
       start: "2016",
       end: "2020",
-      highlights: ["TODO: achievement 1", "TODO: achievement 2"],
-      tech: [],
+      milestones: [], // TODO(Jayshil): add Brainvire highlights.
+    },
+    {
+      kind: "role",
+      company: "Cygnet.One",
+      role: "Senior Software Engineer",
+      start: "2020",
+      end: "present",
+      summary:
+        "Lead frontend development on enterprise Angular platforms, mentor developers, and own code reviews and releases.",
+      milestones: [
+        {
+          title: "Nobilex: Government Notary Portal",
+          text: "Led frontend development with Angular and Keycloak RBAC",
+          badge: "Client accolades",
+          icon: "medal",
+        },
+        {
+          title: "Kero: Business Messaging Platform",
+          text: "Built messaging, media and campaign features in Angular 20",
+          badge: "Spot Award",
+          icon: "trophy",
+        },
+      ],
+    },
+    {
+      kind: "now",
+      title: "Exploring GenAI engineering",
+      text: "Learning Python, RAG and LangChain to build LLM-powered apps.",
     },
   ],
   projects: [
