@@ -30,67 +30,12 @@
   color: oklch(0.86 0.1 220);
 }
 
-/* ---------- Background layers ---------- */
-/* Aurora rays: dimmed so the name is the brightest element; fades in on
-   mount (AnimatedRays renders after hydration). `from`-only keyframes
-   animate up to the element's own opacity. */
-.hero-rays {
-  opacity: 0.45;
-  animation: hero-fade 1.6s ease-out both;
-}
-
+/* Fade-in from transparent up to the element's own opacity (the rays
+   backdrop in hero-rays.css, the video pause toggle). */
 @keyframes hero-fade {
   from {
     opacity: 0;
   }
-}
-
-/* The upstream effect uses mix-blend-mode: difference, which produces
-   complementary greens/oranges/reds. This `color` blend layer keeps the
-   rays' brightness but forces their hue into teal → blue → violet. */
-.hero-rays-tint {
-  background: linear-gradient(
-    100deg,
-    var(--brand-teal) 0%,
-    var(--brand-blue) 50%,
-    var(--brand-violet) 100%
-  );
-  mix-blend-mode: color;
-}
-
-/* Receding grid floor: one element, two gradients, a 3D tilt and a mask. */
-.hero-grid {
-  background-image:
-    linear-gradient(to right, oklch(1 0 0 / 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(1 0 0 / 0.07) 1px, transparent 1px);
-  background-size: 48px 48px;
-  background-position: center top;
-  transform: perspective(600px) rotateX(55deg) scale(2);
-  transform-origin: center top;
-  mask-image: radial-gradient(
-    ellipse 60% 70% at 50% 0%,
-    black 0%,
-    transparent 70%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse 60% 70% at 50% 0%,
-    black 0%,
-    transparent 70%
-  );
-}
-
-.hero-glow {
-  background:
-    radial-gradient(
-      40% 35% at 15% 85%,
-      oklch(0.55 0.2 290 / 0.18),
-      transparent 70%
-    ),
-    radial-gradient(
-      45% 40% at 50% 45%,
-      oklch(0.6 0.15 240 / 0.1),
-      transparent 70%
-    );
 }
 
 /* ---------- Small details ---------- */
@@ -129,10 +74,79 @@
 /* ---------- Reduced motion: everything static and visible ---------- */
 @media (prefers-reduced-motion: reduce) {
   .hero-reveal,
-  .hero-rays,
   .hero-ping,
   .live-ping,
-  .hero-scroll-dot {
+  .hero-scroll-dot,
+  .hero-video-toggle {
     animation: none !important;
+  }
+}
+
+/* ---------- Video backdrop ("ai" / "coded", hero-video-background.tsx) ----------
+   Clips stay invisible (the poster shows) until their first frame is up;
+   the first one fades in over the poster, later ones (coded: intro → loop)
+   swap instantly over the previous clip's held last frame. */
+.hero-video-clip {
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+.hero-video-clip + .hero-video-clip {
+  transition: none;
+}
+.hero-video-clip[data-shown="true"] {
+  opacity: 1;
+}
+
+/* Readability scrims (rgb(5 8 15) ≈ the page background, tinted blue). */
+.hero-scrim-ai {
+  /* Centred layout below 1024px: a vertical overlay plus a soft dark
+     ellipse behind the centred text block (the monitors glow under it). */
+  background:
+    radial-gradient(
+      ellipse 80% 34% at 50% 50%,
+      rgb(5 8 15 / 0.7),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgb(5 8 15 / 0.6) 0%,
+      rgb(5 8 15 / 0.5) 45%,
+      rgb(5 8 15 / 0.7) 100%
+    );
+}
+@media (min-width: 1024px) {
+  /* Left-aligned content over the empty left half of the frame. */
+  .hero-scrim-ai {
+    background: linear-gradient(
+      to right,
+      rgb(5 8 15 / 0.7) 0%,
+      rgb(5 8 15 / 0.62) 42%,
+      transparent 72%
+    );
+  }
+}
+.hero-scrim-coded {
+  background: rgb(5 8 15 / 0.4);
+}
+
+/* Pause / play toggle: appears when the video starts. */
+.hero-video-toggle {
+  animation: hero-fade 0.6s ease-out both;
+}
+
+/* ---------- "ai" left-aligned layout (≥1024px) ----------
+   MorphText centres its absolutely positioned words with an inline
+   left: 50% + a keyframed translate(-50%); the independent `translate`
+   property adds the half width back, so each word starts at the left edge
+   (the component itself is untouched). */
+@media (min-width: 1024px) {
+  /* The root centres a zero-width rotator (its words are absolute):
+     stretch it so `left: 0` is the column's left edge. */
+  .hero-content-left .morph-text-root {
+    align-items: stretch;
+  }
+  .hero-content-left .morph-word {
+    left: 0 !important;
+    translate: 50% 0;
   }
 }

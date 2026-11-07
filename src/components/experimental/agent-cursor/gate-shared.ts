@@ -27,6 +27,13 @@ export function eligibility(
 }
 
 export const GATE_ID = "acb-gate";
+/** Fired on window when the gate times out without a builder. */
+export const GATE_RELEASE_EVENT = "acb-gate-release";
+
+/** The gate is holding the hero for a build that hasn't started yet. */
+export function gatePending(): boolean {
+  return getGateState() === "pending";
+}
 
 /** Hero + navbar units the gate hides before first paint. */
 export const HERO_UNITS =

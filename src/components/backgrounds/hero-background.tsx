@@ -4,6 +4,7 @@ import { useInView } from "motion/react";
 import { useRef } from "react";
 import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { AnimatedRays } from "@/components/ui/animated-rays";
+import "@/styles/hero-rays.css";
 
 /**
  * Layered, decorative hero backdrop:

@@ -1,14 +1,16 @@
 import type { CSSProperties } from "react";
 import { ArrowDownRight } from "lucide-react";
 import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
-import { HeroBackground } from "@/components/backgrounds/hero-background";
 import { HeroName } from "@/components/hero/hero-name";
+import { HeroBackdrop } from "@/components/hero/hero-backdrop";
 import { Section } from "@/components/layout/section";
 import { CreepyButton } from "@/components/ui/creepy-button";
 import { MorphText } from "@/components/ui/morph-text";
 import SocialFlipButton from "@/components/ui/social-flip-button";
+import { HERO_BACKGROUND } from "@/data/hero-background";
 import { profile } from "@/data/profile";
 import { SOCIAL_ITEMS } from "@/lib/social-items";
+import { cn } from "@/lib/utils";
 
 /** Entrance stagger: each `.hero-reveal` element waits `--d` before animating in. */
 const delay = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
@@ -17,6 +19,9 @@ const delay = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
  *  to it so the two never animate at the same moment. */
 const ROLE_INTERVAL_MS = 3500;
 
+/** "ai": the character sits on the right → content in the left half (lg+). */
+const LEFT = HERO_BACKGROUND === "ai";
+
 export function Hero() {
   return (
     <Section
@@ -24,9 +29,15 @@ export function Hero() {
       // Full-bleed and full-viewport; pulled up under the translucent navbar.
       className="relative isolate -mt-[var(--nav-height)] flex min-h-svh max-w-none flex-col items-center justify-center overflow-hidden px-0 pt-28 pb-24 sm:px-0 md:py-32"
     >
-      <HeroBackground />
+      <HeroBackdrop />
 
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-5 text-center sm:px-6">
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-4xl flex-col items-center px-5 text-center sm:px-6",
+          LEFT &&
+            "hero-content-left lg:mx-0 lg:w-[54%] lg:max-w-none lg:items-start lg:self-start lg:pr-0 lg:pl-[max(3rem,calc(50vw-36rem))] lg:text-left",
+        )}
+      >
         <p
           {...agentBuildAttrs("block")}
           className="hero-reveal mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-muted-foreground backdrop-blur-sm"
@@ -41,7 +52,11 @@ export function Hero() {
 
         <h1
           {...agentBuildAttrs("text", "hero-name")}
-          className="hero-reveal text-[clamp(2.5rem,11vw,7rem)] leading-none font-bold tracking-tight"
+          className={cn(
+            "hero-reveal text-[clamp(2.5rem,11vw,7rem)] leading-none font-bold tracking-tight",
+            // Half-width column: sized so the name fits it.
+            LEFT && "lg:text-[clamp(3.5rem,5.6vw,6rem)]",
+          )}
           style={delay(250)}
         >
           {/* The real name for SEO / screen readers; the looping flip-fade
@@ -73,7 +88,11 @@ export function Hero() {
 
         <p
           {...agentBuildAttrs("text")}
-          className="hero-reveal mt-4 max-w-xl text-base text-pretty text-muted-foreground sm:mt-6 sm:text-lg"
+          className={cn(
+            "hero-reveal mt-4 max-w-xl text-base text-pretty text-muted-foreground sm:mt-6 sm:text-lg",
+            // Wraps short of the character's face at 1024–1279px.
+            LEFT && "lg:max-w-md xl:max-w-xl",
+          )}
           style={delay(850)}
         >
           {profile.tagline}
