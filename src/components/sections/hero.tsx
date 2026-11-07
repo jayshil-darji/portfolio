@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { ArrowDownRight } from "lucide-react";
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { HeroBackground } from "@/components/backgrounds/hero-background";
 import { HeroName } from "@/components/hero/hero-name";
 import { Section } from "@/components/layout/section";
@@ -27,6 +28,7 @@ export function Hero() {
 
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-5 text-center sm:px-6">
         <p
+          {...agentBuildAttrs("block")}
           className="hero-reveal mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-muted-foreground backdrop-blur-sm"
           style={delay(100)}
         >
@@ -38,6 +40,7 @@ export function Hero() {
         </p>
 
         <h1
+          {...agentBuildAttrs("text", "hero-name")}
           className="hero-reveal text-[clamp(2.5rem,11vw,7rem)] leading-none font-bold tracking-tight"
           style={delay(250)}
         >
@@ -51,7 +54,11 @@ export function Hero() {
           />
         </h1>
 
-        <div className="hero-reveal mt-4 w-full sm:mt-6" style={delay(550)}>
+        <div
+          {...agentBuildAttrs("text", "hero-roles")}
+          className="hero-reveal mt-4 w-full sm:mt-6"
+          style={delay(550)}
+        >
           <p className="sr-only">{profile.roles.join(", ")}</p>
           <div aria-hidden="true">
             <MorphText
@@ -65,6 +72,7 @@ export function Hero() {
         </div>
 
         <p
+          {...agentBuildAttrs("text")}
           className="hero-reveal mt-4 max-w-xl text-base text-pretty text-muted-foreground sm:mt-6 sm:text-lg"
           style={delay(850)}
         >
@@ -74,7 +82,11 @@ export function Hero() {
         {/* Only CTA: a real <a href="#projects">, so the navbar's in-page
             scroll handling (smooth scroll + spotlight lock) applies. No
             magnetic wrapper — its pull fought the eye tracking. */}
-        <div className="hero-reveal mt-9 sm:mt-11" style={delay(1050)}>
+        <div
+          {...agentBuildAttrs("block")}
+          className="hero-reveal mt-9 sm:mt-11"
+          style={delay(1050)}
+        >
           <CreepyButton
             href="#projects"
             className="text-base sm:text-[1.05rem]"
@@ -84,7 +96,11 @@ export function Hero() {
           </CreepyButton>
         </div>
 
-        <div className="hero-reveal mt-8 sm:mt-10" style={delay(1250)}>
+        <div
+          {...agentBuildAttrs("block")}
+          className="hero-reveal mt-8 sm:mt-10"
+          style={delay(1250)}
+        >
           <SocialFlipButton items={SOCIAL_ITEMS} listLabel="Social links" />
         </div>
       </div>

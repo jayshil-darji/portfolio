@@ -1,5 +1,6 @@
 "use client";
 
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { Medal, Trophy, type LucideIcon } from "lucide-react";
 import {
   motion,
@@ -24,6 +25,7 @@ import type {
   ExperienceRole,
   MilestoneIcon,
 } from "@/data/profile";
+import { useBuildActive } from "@/components/experimental/agent-cursor/build-state";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +118,7 @@ export function ExperienceTimeline({
       {/* Decorative line: track, drawn fill, leading dot. */}
       <div
         aria-hidden="true"
+        {...agentBuildAttrs("image")}
         className="pointer-events-none absolute top-0 bottom-0 left-5 w-0.5 -translate-x-1/2 [mask-image:linear-gradient(to_bottom,black_88%,transparent)] lg:left-1/2"
       >
         <div className="absolute inset-0 rounded-full bg-white/10" />
@@ -168,6 +171,7 @@ function TimelineItem({
   const lit = useTransform(scrollY, [trigger - 16, trigger], [0, 1]);
   const reveal = useTransform(scrollY, [trigger - 80, trigger], [0, 1]);
   const nodeScale = useTransform(lit, [0, 1], [1, 1.3]);
+  const buildActive = useBuildActive();
 
   const left = side === "left";
 
@@ -212,11 +216,18 @@ function TimelineItem({
 
       {/* Card: fades/slides in as the line approaches. */}
       <motion.div
+        {...agentBuildAttrs("block")}
         className={cn(
           "tl-card col-start-2 row-start-2 lg:row-start-1",
           left ? "lg:col-start-1" : "lg:col-start-3",
         )}
-        style={{ "--reveal": reduced ? 1 : reveal } as unknown as CSSProperties}
+        // EXPERIMENT (agent-cursor): inside the build the card is revealed
+        // by the build — no slide-in.
+        style={
+          {
+            "--reveal": reduced || buildActive ? 1 : reveal,
+          } as unknown as CSSProperties
+        }
       >
         {entry.kind === "role" ? (
           <RoleCard role={entry} />

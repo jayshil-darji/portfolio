@@ -2,6 +2,7 @@
 
 import { useInView } from "motion/react";
 import { useRef } from "react";
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { AnimatedRays } from "@/components/ui/animated-rays";
 
 /**
@@ -23,6 +24,7 @@ export function HeroBackground() {
       ref={ref}
       aria-hidden="true"
       data-paused={!inView}
+      {...agentBuildAttrs("image")}
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-background"
     >
       <AnimatedRays className="hero-rays absolute inset-0" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { FlipFadeText } from "@/components/ui/flip-fade-text";
+import { useBuilt } from "@/components/experimental/agent-cursor/build-state";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 /** Flip this far into a role slot (fraction). A role change (MorphText
@@ -29,6 +30,12 @@ export function HeroName({
   syncSelector: string;
 }) {
   const reduced = usePrefersReducedMotion();
+  // EXPERIMENT (agent-cursor): the loop starts once the name and the roles
+  // (its phase anchor) are built; toggling `static` off restarts the
+  // FlipFadeText schedule.
+  const nameBuilt = useBuilt("hero-name");
+  const rolesBuilt = useBuilt("hero-roles");
+  const built = nameBuilt && rolesBuilt;
   const alignTo = () => {
     const anim = document.querySelector(syncSelector)?.getAnimations()[0];
     return anim?.startTime != null
@@ -43,7 +50,7 @@ export function HeroName({
       // First replay after the entrance has settled.
       startDelay={2500}
       alignTo={alignTo}
-      static={reduced}
+      static={reduced || !built}
       letterDuration={0.5}
       staggerDelay={0.04}
       exitStaggerDelay={0.025}

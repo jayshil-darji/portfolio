@@ -1,5 +1,6 @@
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { AsciiGlitchRipple } from "@/components/ui/ascii-glitch-ripple";
-import TextAnimation from "@/components/ui/stagger-text";
+import { SectionTitleText } from "./section-title-text";
 import { SECTIONS, type SectionId } from "@/data/nav";
 
 export type TitleEffect = "stagger" | "glitch";
@@ -26,7 +27,8 @@ export function SectionHeading({
   const label = SECTIONS[index]?.label ?? title;
 
   return (
-    <div className="mb-10 md:mb-14">
+    // EXPERIMENT (agent-cursor): eyebrow + heading = one build unit.
+    <div className="mb-10 md:mb-14" {...agentBuildAttrs("text")}>
       <p className="mb-3 flex items-center gap-3 font-mono text-xs tracking-widest text-muted-foreground uppercase">
         <span className="text-sky-300/80">
           {String(index).padStart(2, "0")}
@@ -46,7 +48,7 @@ export function SectionHeading({
         </AsciiGlitchRipple>
       ) : (
         <h2 id={`${id}-heading`} className={TITLE_CLASS}>
-          <TextAnimation>{title}</TextAnimation>
+          <SectionTitleText title={title} />
         </h2>
       )}
     </div>

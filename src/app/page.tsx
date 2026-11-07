@@ -1,3 +1,4 @@
+import { BuildRoot } from "@/components/experimental/agent-cursor/build-root";
 import {
   About,
   Contact,
@@ -18,6 +19,9 @@ export default function Home() {
       <Experience />
       <Projects />
       <Contact />
+      {/* EXPERIMENT (agent-cursor): inside the page so the builder only
+          mounts after the page content has hydrated. Nothing when off. */}
+      <BuildRoot />
     </main>
   );
 }

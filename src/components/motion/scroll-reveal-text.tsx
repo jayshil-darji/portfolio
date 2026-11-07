@@ -7,6 +7,7 @@ import {
   type MotionValue,
 } from "motion/react";
 import { useMemo, useRef, type ReactNode } from "react";
+import { useBuildActive } from "@/components/experimental/agent-cursor/build-state";
 import { AsciiGlitchRipple } from "@/components/ui/ascii-glitch-ripple";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +79,9 @@ export function ScrollRevealText({
   });
   const tokens = useMemo(() => tokenize(text, highlights), [text, highlights]);
   const revealCount = tokens.filter((t) => t.kind !== "space").length;
+  // EXPERIMENT (agent-cursor): the build reveals the paragraph — words stay
+  // fully opaque instead of brightening on scroll.
+  const settled = useBuildActive();
 
   let n = 0;
   return (
@@ -90,7 +94,13 @@ export function ScrollRevealText({
           (index + 1) / revealCount,
         ];
         return (
-          <Word key={i} progress={scrollYProgress} range={range} dim={dim}>
+          <Word
+            key={i}
+            progress={scrollYProgress}
+            range={range}
+            dim={dim}
+            settled={settled}
+          >
             {tok.kind === "highlight" ? (
               <AsciiGlitchRipple
                 as="span"
@@ -114,15 +124,21 @@ function Word({
   progress,
   range,
   dim,
+  settled,
 }: {
   children: ReactNode;
   progress: MotionValue<number>;
   range: [number, number];
   dim: number;
+  /** Fully opaque, not scroll-linked (explicit value, never undefined). */
+  settled: boolean;
 }) {
   const opacity = useTransform(progress, range, [dim, 1]);
   return (
-    <motion.span style={{ opacity }} className="scroll-reveal-word">
+    <motion.span
+      style={{ opacity: settled ? 1 : opacity }}
+      className="scroll-reveal-word"
+    >
       {children}
     </motion.span>
   );

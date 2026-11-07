@@ -79,8 +79,40 @@ Tried and not kept: `liquid-text` (WebGL canvas text: not accessible,
 131 KB gz with three.js, always-on render loop), `wave-grid-background`
 (three.js + 1,600 shadowed instanced cubes + post-processing, render loop
 never stops — lost to `light-lines` for the Contact background; evaluated
-from the registry JSON, never installed). The project has no GSAP
-dependency — port GSAP-based components to CSS/motion.
+from the registry JSON, never installed). Site components don't use
+GSAP — port GSAP-based components to CSS/motion. The only exception is the
+flag-gated experiment in `components/experimental/agent-cursor/` (the
+site builds itself on scroll; GSAP in a lazy chunk only; see its README for
+the architecture and removal steps).
+- Flag-gating a lazy chunk with Turbopack: the `import()` must sit in the
+  same module as the literal flag (an imported constant isn't folded, so
+  the chunk is still emitted). If that module is also imported by server
+  components, add `typeof window !== "undefined"` to the condition, or Next
+  preloads the client chunk as a page `<script>`.
+- Pre-paint state must not live on `<html>`/`<body>` attributes: React
+  reports attributes it didn't render as a hydration mismatch. Inject a
+  `<style id>` into `<head>` instead (extra head nodes are tolerated).
+- Anything that mutates page DOM from a layout-level client component must
+  wait for the PAGE segment to hydrate: it hydrates after the layout, and
+  inline styles written into it earlier are a hydration mismatch. Render
+  such roots inside the page (see `BuildRoot` in page.tsx).
+- `html { scroll-behavior: smooth }` makes the browser smooth-scroll to a
+  URL hash on load (~1s): treat a hash load like an anchor-click jump.
+- Motion components that already applied `initial` keep it when that prop
+  changes later: to skip an entrance after hydration, pass explicit
+  `animate` values (see ContactReveal).
+- Labelled cursors (agent swarm): separate them with boxes sized to the
+  label, not point distance — a point radius lets pills overlap side by
+  side, and agents clamped to a viewport edge form piles that need ~N
+  relaxation passes. Measure overlaps DURING the animation, not after it.
+- Scroll locks: toggling `overflow` / `scrollbar-gutter` on the root moves
+  centred content by half a scrollbar when released (CLS). Block scroll
+  input (wheel / touchmove / scroll keys) instead.
+- Measuring LCP here: the hero text starts at opacity 0 (CSS entrance), so
+  Chrome reports a navbar link as LCP whether the hero appears at 0.5s or
+  2s. Measure when the `<h1>` is actually visible (rAF probe on its
+  opacity/clip) alongside the LCP entry. The FlipFadeText loop re-mounts
+  letter spans, so later LCP entries (7s+) are artefacts.
 Removed once unused (no dead code): `interactive-hover-button`,
 `animated-tooltip`, the Magnetic / Tilt primitives, `gooey-text-reveal`
 (its SVG alpha-threshold filter rendered jagged, pixelated edges on large

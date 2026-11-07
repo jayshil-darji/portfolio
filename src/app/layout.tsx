@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { BuildGate } from "@/components/experimental/agent-cursor/gate";
 import { Navbar } from "@/components/layout/navbar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MotionProvider } from "@/components/providers/motion-provider";
@@ -41,6 +42,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        {/* EXPERIMENT (agent-cursor): renders nothing when off. */}
+        <BuildGate />
         <MotionProvider>
           <Navbar />
           {children}
