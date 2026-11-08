@@ -170,6 +170,17 @@ html {
   --brand-violet: oklch(0.58 0.2 290);
 }
 
+/* Rounded clip that survives iOS Safari compositing. WebKit can clip a
+   composited child (transform / hover zoom / layout animation / scroll
+   container) to the parent's RECTANGLE and drop its border-radius; a mask
+   on the rounded box makes it clip to the rounded shape. Use together with
+   overflow-hidden + a radius. The mask also clips this box's own
+   box-shadow / ring: don't use it on boxes that cast a shadow. */
+@utility clip-rounded {
+  -webkit-mask-image: linear-gradient(#000 0 0);
+  mask-image: linear-gradient(#000 0 0);
+}
+
 /* Offset anchor targets so the sticky navbar doesn't cover section headings. */
 section[id] {
   scroll-margin-top: var(--nav-height);

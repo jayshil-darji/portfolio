@@ -20,6 +20,9 @@
  *  6. No "use client" needed (no hooks / handlers).
  *  7. "hover" rotation runs on :hover only for fine, hover-capable
  *     pointers (touch left :hover stuck after a tap); :focus-within always.
+ *  8. The glow ring clip-paths itself to the card's rounded box (iOS
+ *     Safari drew it with square corners: its composited layer escaped
+ *     the card's rounded overflow clip).
  */
 
 import { forwardRef, type CSSProperties, type HTMLAttributes } from "react";
@@ -162,10 +165,20 @@ export const GlowBorderCard = forwardRef<HTMLDivElement, GlowBorderCardProps>(
         }
         {...props}
       >
+        {/* LOCAL PATCH 8: the blurred ring clips ITSELF to the card's
+            rounded box (clip-path is applied after filter). iOS Safari
+            composites this layer and then clips it to the card's
+            rectangle only, ignoring the rounded overflow clip, so the glow
+            filled the corners square. */}
         <div
           aria-hidden="true"
           className="glow-conic absolute -z-10 rounded-[inherit] border-solid"
-          style={{ inset, borderWidth, filter: `blur(${blurAmount})` }}
+          style={{
+            inset,
+            borderWidth,
+            filter: `blur(${blurAmount})`,
+            clipPath: `inset(calc(-1 * (${inset})) round ${borderRadius})`,
+          }}
         />
         <div
           className={cn(

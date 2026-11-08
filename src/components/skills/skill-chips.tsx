@@ -78,8 +78,10 @@ export function SkillChips({
                         className={cn(
                           "flex min-h-11 items-center gap-2 rounded-full border bg-white/[0.03] py-2 pr-4 pl-2.5 text-sm font-medium transition-[border-color,background-color,box-shadow,scale] duration-200 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                           group.learning ? "border-dashed" : "",
+                          // Selected: brand border at 60% + a faint tint and
+                          // low-opacity glow (same mix for every brand colour).
                           active
-                            ? "border-[var(--c)] bg-white/[0.07] shadow-[0_0_18px_-4px_var(--c)]"
+                            ? "border-[color-mix(in_oklch,var(--c)_60%,transparent)] bg-[color-mix(in_oklch,var(--c)_8%,transparent)] shadow-[0_0_14px_-6px_color-mix(in_oklch,var(--c)_45%,transparent)]"
                             : "border-white/10 hover:border-white/25",
                         )}
                       >
@@ -112,11 +114,12 @@ export function SkillChips({
                     transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                     className="overflow-hidden"
                   >
-                    <SkillDetail
-                      item={selected}
-                      headingLevel="h4"
-                      className="pt-4"
-                    />
+                    {/* Spacing on a wrapper, never on SkillDetail: its box
+                        must equal the card's, or its RotatingBorder frames
+                        the padding too (a second border 1rem above). */}
+                    <div className="pt-4">
+                      <SkillDetail item={selected} headingLevel="h4" />
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>

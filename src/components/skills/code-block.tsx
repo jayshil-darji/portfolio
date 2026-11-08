@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type { CodeLang, CodeSample } from "@/data/profile";
 import { cn } from "@/lib/utils";
 
@@ -5,6 +8,10 @@ import { cn } from "@/lib/utils";
  * Editor-style code block with a tiny regex highlighter (no Shiki/Prism —
  * these snippets are 3–6 lines). Pure function of its input, so server and
  * client render identical markup.
+ *
+ * Long lines scroll horizontally inside the <pre> (the card never widens).
+ * While code is hidden past the right edge, that edge fades out
+ * (`data-more`, measured after mount → SSR has no fade, no mismatch).
  */
 
 type Token = { t: string; c?: string };
@@ -127,11 +134,31 @@ export function CodeBlock({
 }) {
   const lines = sample.source.split("\n");
   const tokens = tokenize(sample.source, sample.lang);
+  const preRef = useRef<HTMLPreElement>(null);
+  const [more, setMore] = useState(false);
+
+  useEffect(() => {
+    const pre = preRef.current;
+    if (!pre) return;
+    const update = () =>
+      setMore(pre.scrollLeft + pre.clientWidth < pre.scrollWidth - 1);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(pre);
+    pre.addEventListener("scroll", update, { passive: true });
+    return () => {
+      ro.disconnect();
+      pre.removeEventListener("scroll", update);
+    };
+  }, [sample]);
 
   return (
     <figure
       className={cn(
-        "overflow-hidden rounded-xl border border-white/10 bg-[oklch(0.13_0.005_260)] shadow-[0_10px_40px_-15px_oklch(0_0_0/0.8)]",
+        // min-w-0: never let the code's width size the card (grid/flex).
+        // clip-rounded: the <pre> scroller is composited on iOS, which
+        // otherwise escapes the rounded clip.
+        "clip-rounded min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[oklch(0.13_0.005_260)] shadow-[0_10px_40px_-15px_oklch(0_0_0/0.8)]",
         className,
       )}
     >
@@ -149,7 +176,9 @@ export function CodeBlock({
         </span>
       </figcaption>
       <pre
-        className="overflow-x-auto py-3 font-mono text-[12.5px] leading-relaxed"
+        ref={preRef}
+        data-more={more || undefined}
+        className="overflow-x-auto overscroll-x-contain py-3 data-[more]:[mask-image:linear-gradient(to_right,#000_calc(100%-2.5rem),transparent)] font-mono text-[12.5px] leading-relaxed"
         tabIndex={0}
         aria-label={`${LANG_LABEL[sample.lang]} example: ${sample.file}`}
       >

@@ -124,10 +124,15 @@ function Collapsed({
         transition={{ layout: coverTransition }}
         className={cn(
           "relative block aspect-[16/10] shrink-0 overflow-hidden bg-white/[0.03]",
+          // Rounds + clips ITSELF (tile's inner radius at the top; framed
+          // when wide): iOS Safari dropped the tile's rounded clip around
+          // the zooming / layout-animated cover.
+          "clip-rounded rounded-t-[calc(1rem-1px)]",
           mdWide && "md:m-5 md:mr-0 md:w-[38%] md:self-start md:rounded-xl",
           lgWide
             ? "lg:m-5 lg:mr-0 lg:w-[38%] lg:self-start lg:rounded-xl"
-            : mdWide && "lg:m-0 lg:w-auto lg:self-auto lg:rounded-none",
+            : mdWide &&
+                "lg:m-0 lg:w-auto lg:self-auto lg:rounded-t-[calc(1rem-1px)] lg:rounded-b-none",
         )}
       >
         <ProjectCover
@@ -211,7 +216,7 @@ function Expanded({
       <motion.div
         layoutId={coverId(p)}
         transition={{ layout: coverTransition }}
-        className="relative aspect-[16/10] self-start overflow-hidden rounded-xl bg-white/[0.03]"
+        className="clip-rounded relative aspect-[16/10] self-start overflow-hidden rounded-xl bg-white/[0.03]"
       >
         <ProjectCover
           project={p}
