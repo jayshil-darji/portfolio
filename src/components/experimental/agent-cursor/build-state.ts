@@ -12,7 +12,7 @@
  * useBuildHold(id): the hold signal for JS-driven media (the hero video):
  *   true while the pre-paint gate holds the hero for a build that hasn't
  *   started yet, or while the builder hasn't revealed the unit. CSS
- *   animations (the rays) need no hook: [data-acb-pending] pauses them.
+ *   animations need no hook: [data-acb-pending] pauses them.
  *   Flag off → always false.
  * Server snapshot: inactive → hydration always matches the server HTML.
  */

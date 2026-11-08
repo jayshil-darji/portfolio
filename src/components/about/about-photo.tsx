@@ -34,21 +34,25 @@ interface AboutPhotoProps {
 const EASE_IN_OUT = [0.77, 0, 0.175, 1] as const;
 
 /**
- * Particle tuning. The whole source image is used as-is (no subject mask —
- * the office background is part of the look). A low threshold keeps the
- * facial shading.
+ * Particle tuning for the background-removed cutout (profile.photoCutout):
+ * transparent pixels are dropped by the sampler, so only the subject is
+ * sampled. That frees the budget the office background used to take, so
+ * the grid is finer at the same cost as the old full photo (~55k
+ * particles on pointer devices vs 59k, ~31k on touch vs 33k), with
+ * slightly smaller dots. threshold 20: darker pixels (the navy blazer)
+ * would render darker than the frame and only cost particles.
  */
 const PARTICLES_POINTER = {
   threshold: 20,
-  size: 1.4,
-  maxDimension: 320,
+  size: 1.25,
+  maxDimension: 400,
   touchRadius: 0.18,
 };
 // Touch / no-hover: ~45% fewer particles, slightly larger, same idle drift.
 const PARTICLES_TOUCH = {
   threshold: 20,
-  size: 1.7,
-  maxDimension: 240,
+  size: 1.5,
+  maxDimension: 300,
   touchRadius: 0.22,
 };
 

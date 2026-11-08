@@ -6,43 +6,6 @@
  * collisions. Every block has a prefers-reduced-motion fallback.
  */
 
-/* ---------- AnimatedRays (@vengeanceui/animated-rays) ----------
- * Upstream references `animate-aurora-bg` and `--stripe-color` but defines
- * neither (they only exist inside aurora-hero). Ported from aurora-hero.
- * Black stripes + saturate filter = coloured rays on a dark background.
- */
-.vui-rays {
-  --stripe-color: #000;
-}
-
-.animate-aurora-bg {
-  animation: vui-aurora-bg 60s linear infinite;
-}
-
-/* Paused when the hero is off-screen (set by HeroBackground). */
-[data-paused="true"] .animate-aurora-bg {
-  animation-play-state: paused;
-}
-
-@keyframes vui-aurora-bg {
-  from {
-    background-position:
-      50% 50%,
-      50% 50%;
-  }
-  to {
-    background-position:
-      350% 50%,
-      350% 50%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-aurora-bg {
-    animation: none !important;
-  }
-}
-
 /* ---------- MorphText (@vengeanceui/morph-text) ----------
  * Words are inline-styled `opacity: 0` and revealed only by animation, so a
  * reduced-motion user would otherwise see nothing. Show the first word only.

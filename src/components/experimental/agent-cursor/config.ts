@@ -107,7 +107,7 @@ export const NEAR_VIEW = 0.15;
  *   "off": no tour and no tour buttons.
  * Any user input stops it immediately; it never restarts by itself.
  */
-export const AUTO_TOUR: "auto" | "button" | "off" = "auto";
+export const AUTO_TOUR: "auto" | "button" | "off" = "button";
 /**
  * Continuous tour: one smooth scroll from the top to the built footer.
  * Base speed ≈ scrollable height / TOUR_DURATION_S (compensated for the

@@ -7,7 +7,9 @@
  * render as hydration mismatches. Not claimed by the builder within
  * GATE_TIMEOUT_MS → removed again: the hero shows with its normal
  * entrance (and GATE_RELEASE_EVENT fires on window, so anything holding
- * on the gate, e.g. the hero video, re-checks). JS disabled → nothing hidden. Flag off → renders nothing.
+ * on the gate, e.g. the hero video, re-checks). JS disabled → nothing
+ * hidden. Flag off → renders nothing. Only on "/" (other routes, e.g. the
+ * 404 page, have no hero and no builder).
  */
 
 import {
@@ -28,7 +30,8 @@ const timeout =
     ? GATE_TIMEOUT_MS.development
     : GATE_TIMEOUT_MS.production;
 
-const script = `(function(){try{if(!(${eligibility.toString()})(window,${j(AGENT_CURSOR_QUERY)}).hero)return;var s=document.createElement("style");s.id=${j(GATE_ID)};s.setAttribute("data-state","pending");s.textContent=${j(gateCss("pending"))};document.head.appendChild(s);setTimeout(function(){if(s.getAttribute("data-state")==="pending"){s.remove();dispatchEvent(new Event(${j(GATE_RELEASE_EVENT)}))}},${timeout})}catch(e){}})();`;
+// Home page only: other routes (the 404 page) have no builder to claim it.
+const script = `(function(){try{if(location.pathname!=="/")return;if(!(${eligibility.toString()})(window,${j(AGENT_CURSOR_QUERY)}).hero)return;var s=document.createElement("style");s.id=${j(GATE_ID)};s.setAttribute("data-state","pending");s.textContent=${j(gateCss("pending"))};document.head.appendChild(s);setTimeout(function(){if(s.getAttribute("data-state")==="pending"){s.remove();dispatchEvent(new Event(${j(GATE_RELEASE_EVENT)}))}},${timeout})}catch(e){}})();`;
 
 export function BuildGate() {
   if (!AGENT_CURSOR_ENABLED) return null;

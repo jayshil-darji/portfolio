@@ -2,17 +2,27 @@
 
 import { Pause, Play } from "lucide-react";
 import { useInView } from "motion/react";
-import Image, { getImageProps } from "next/image";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { getImageProps } from "next/image";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from "react";
 import { useBuildHold } from "@/components/experimental/agent-cursor/build-state";
 import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { usePageVisible } from "@/hooks/use-page-visible";
+import {
+  HERO_BACKDROPS,
+  type BackdropLayout,
+  type HeroBackgroundKind,
+  type Responsive,
+} from "@/data/hero-background";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
-type Variant = "ai" | "coded";
-
 const BASE = "/videos/hero";
-/** "ai" switches to the portrait crop below this; "coded" shows its poster. */
+/** Portrait clip + poster below this. */
 const MOBILE_QUERY = "(max-width: 767px)";
 /** Build unit id (agent-cursor experiment): the video waits for its reveal. */
 const BUILD_ID = "hero-bg";
@@ -93,23 +103,29 @@ function useUserPaused(): boolean {
 
 /* ---------- poster ---------- */
 
-/** The first visual (server-rendered, high priority): the build reveals
- *  it, and the video fades in over it. */
-function Poster({ variant }: { variant: Variant }) {
-  if (variant === "coded")
-    return (
-      <Image
-        src={`${BASE}/coded/hero-poster.jpg`}
-        width={1280}
-        height={720}
-        alt=""
-        sizes="100vw"
-        preload
-        className="absolute inset-0 size-full object-cover"
-      />
-    );
-  // "ai": art direction (portrait crop below 768px) → <picture>, which
-  // can't be preloaded without loading both crops: high fetch priority.
+/** Per-breakpoint CSS vars (--{name}, --{name}-md, --{name}-lg); hero.css
+ *  resolves them with fallbacks to the next smaller breakpoint. */
+function responsiveVars(name: string, v: Responsive<string>) {
+  return {
+    [`--${name}`]: v.base,
+    ...(v.md ? { [`--${name}-md`]: v.md } : {}),
+    ...(v.lg ? { [`--${name}-lg`]: v.lg } : {}),
+  } as CSSProperties;
+}
+
+/**
+ * The first visual (server-rendered): the build reveals it, and the video
+ * fades in over it. Art direction (portrait crop below 768px) → <picture>,
+ * which can't be preloaded without loading both crops: high fetch
+ * priority instead.
+ */
+function Poster({
+  dir,
+  poster,
+}: {
+  dir: string;
+  poster: BackdropLayout["poster"];
+}) {
   const common = {
     alt: "",
     sizes: "100vw",
@@ -118,17 +134,15 @@ function Poster({ variant }: { variant: Variant }) {
   };
   const { props: desktop } = getImageProps({
     ...common,
-    src: `${BASE}/ai/hero-poster.jpg`,
-    width: 1280,
-    height: 720,
+    src: `${dir}/hero-poster.jpg`,
+    ...poster.desktop,
   });
   const {
     props: { srcSet: mobile },
   } = getImageProps({
     ...common,
-    src: `${BASE}/ai/hero-poster-mobile.jpg`,
-    width: 540,
-    height: 720,
+    src: `${dir}/hero-poster-mobile.jpg`,
+    ...poster.mobile,
   });
   return (
     <picture>
@@ -136,7 +150,7 @@ function Poster({ variant }: { variant: Variant }) {
       <img
         {...desktop}
         alt=""
-        className="absolute inset-0 size-full object-cover md:object-right"
+        className="hero-media absolute inset-0 size-full object-cover"
       />
     </picture>
   );
@@ -144,131 +158,95 @@ function Poster({ variant }: { variant: Variant }) {
 
 /* ---------- player ---------- */
 
-/** Reveal a clip once its first frame is presented (then `then`). */
-function showOnFrame(v: HTMLVideoElement, then?: () => void) {
+/** Reveal the clip once its first frame is presented. */
+function showOnFrame(v: HTMLVideoElement) {
   const reveal = () => {
     v.dataset.shown = "true";
-    then?.();
   };
   if (typeof v.requestVideoFrameCallback === "function")
     v.requestVideoFrameCallback(reveal);
   else v.addEventListener("playing", reveal, { once: true });
 }
 
-function rewind(v: HTMLVideoElement) {
-  v.pause();
-  v.currentTime = 0;
-  delete v.dataset.shown;
-}
-
-function start(v: HTMLVideoElement, then?: () => void) {
-  if (v.dataset.shown !== "true") showOnFrame(v, then);
-  v.play().catch(() => {
-    // Autoplay refused (rare for muted video): stay on the poster.
-  });
-}
-
-interface Clip {
-  name: string;
-  loop: boolean;
-}
-
 /**
- * Stacked clips played in order; the last one loops ("ai": one looping
- * clip; "coded": intro once → loop). Each clip is hidden (poster shows)
- * until its first frame is presented; the next clip is preloaded and only
- * shown once it has a frame up, over the previous clip's last (held) frame
- * → no black frame on the hand-off.
+ * One muted, looping clip. Hidden (the poster shows) until its first frame
+ * is up; held by the build (or Replay) → paused, rewound, poster again.
  */
 function Player({
-  dir,
-  clips,
+  src,
   play,
   held,
   onError,
-  className,
 }: {
-  dir: string;
-  clips: Clip[];
+  /** Path without extension (.webm, then .mp4). */
+  src: string;
   play: boolean;
   held: boolean;
   onError: () => void;
-  className: string;
 }) {
-  const refs = useRef<(HTMLVideoElement | null)[]>([]);
-  const stage = useRef(0);
-  const playRef = useRef(play);
+  const ref = useRef<HTMLVideoElement>(null);
 
-  // Held by the build (or Replay): back to the poster, rewound to 0.
   useEffect(() => {
-    if (!held) return;
-    stage.current = 0;
-    refs.current.forEach((v) => v && rewind(v));
+    const v = ref.current;
+    if (!v || !held) return;
+    v.pause();
+    v.currentTime = 0;
+    delete v.dataset.shown;
   }, [held]);
 
   useEffect(() => {
-    playRef.current = play;
-    const v = refs.current[stage.current];
+    const v = ref.current;
     if (!v) return;
-    if (play) start(v);
-    else v.pause();
+    if (!play) {
+      v.pause();
+      return;
+    }
+    if (v.dataset.shown !== "true") showOnFrame(v);
+    v.play().catch(() => {
+      // Autoplay refused (rare for muted video): stay on the poster.
+    });
   }, [play]);
 
-  /** Hand-off: the next clip (preloaded) starts at 0 and covers the
-   *  previous one's held last frame once its own first frame is up. */
-  const ended = (i: number) => {
-    const next = refs.current[i + 1];
-    if (!next || stage.current !== i) return;
-    stage.current = i + 1;
-    next.currentTime = 0;
-    if (playRef.current) start(next);
-  };
-
-  return clips.map((c, i) => (
+  return (
     <video
-      key={c.name}
-      ref={(el) => {
-        refs.current[i] = el;
-        if (el) el.muted = true;
-      }}
-      className={className}
+      ref={ref}
+      className="hero-media hero-video-clip absolute inset-0 size-full object-cover"
       muted
       playsInline
-      loop={c.loop}
-      preload="auto"
+      loop
+      // Nothing is fetched while it can't play (held by the build,
+      // off-screen, paused by the visitor); play() starts the download.
+      preload={play ? "auto" : "none"}
       disablePictureInPicture
       tabIndex={-1}
-      onEnded={c.loop ? undefined : () => ended(i)}
     >
-      <source src={`${dir}/${c.name}.webm`} type="video/webm" />
+      <source src={`${src}.webm`} type="video/webm" />
       {/* All sources failed → poster only. */}
-      <source src={`${dir}/${c.name}.mp4`} type="video/mp4" onError={onError} />
+      <source src={`${src}.mp4`} type="video/mp4" onError={onError} />
     </video>
-  ));
+  );
 }
 
-const CLIPS: Record<Variant, Clip[]> = {
-  ai: [{ name: "hero-loop", loop: true }],
-  coded: [
-    { name: "hero-intro", loop: false },
-    { name: "hero-loop", loop: true },
-  ],
-};
-
 /**
- * Decorative hero video ("ai" | "coded", src/data/hero-background.ts).
+ * Decorative hero video ("ai" | "office"); posters, object-position and
+ * overlay come from HERO_BACKDROPS (src/data/hero-background.ts).
  * The poster is the server-rendered first visual (high fetch priority);
  * the video loads after the window `load` event and fades in over it once
- * it has a frame. Poster only with reduced motion, Save-Data, a failed
- * load, or ("coded") below 768px. Paused off-screen / in a hidden tab /
- * by the visitor (toggle, remembered for the session).
+ * it has a frame. Desktop clip from 768px, portrait clip below (chosen
+ * after mount, live). Poster only with reduced motion, Save-Data or a
+ * failed load. Paused off-screen / in a hidden tab / by the visitor
+ * (toggle, remembered for the session).
  *
  * EXPERIMENT (agent-cursor): this layer is the hero's background build unit
  * ("image"); the build reveals the poster and the video starts from 0 only
  * after that (useBuildHold). Replay rewinds it to the poster. Flag off →
  * the hold is always false.
  */
-export function HeroVideoBackground({ variant }: { variant: Variant }) {
+export function HeroVideoBackground({
+  variant,
+}: {
+  variant: HeroBackgroundKind;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { initial: true });
   const visible = usePageVisible();
@@ -279,18 +257,11 @@ export function HeroVideoBackground({ variant }: { variant: Variant }) {
   const held = useBuildHold(BUILD_ID);
   const userPaused = useUserPaused();
   const [failed, setFailed] = useState(false);
+  const { scrim, poster, position } = HERO_BACKDROPS[variant];
 
-  const enabled =
-    loaded &&
-    !reduced &&
-    !saveData &&
-    !failed &&
-    !(variant === "coded" && mobile);
+  const enabled = loaded && !reduced && !saveData && !failed;
   const dir = `${BASE}/${variant}`;
-  const clips =
-    variant === "ai" && mobile
-      ? [{ name: "hero-loop-mobile", loop: true }]
-      : CLIPS[variant];
+  const src = `${dir}/${mobile ? "hero-loop-mobile" : "hero-loop"}`;
 
   return (
     <>
@@ -299,24 +270,23 @@ export function HeroVideoBackground({ variant }: { variant: Variant }) {
         aria-hidden="true"
         {...agentBuildAttrs("image", BUILD_ID)}
         className="hero-video pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-background"
+        style={{
+          ...responsiveVars("pos", position),
+          ...responsiveVars("scrim", scrim),
+        }}
       >
-        <Poster variant={variant} />
+        <Poster dir={dir} poster={poster} />
         {enabled && (
           <Player
-            // New sources (desktop ↔ mobile crop) → fresh elements.
-            key={clips[0].name}
-            dir={dir}
-            clips={clips}
+            // New source (desktop ↔ portrait crop) → a fresh element.
+            key={src}
+            src={src}
             play={!held && inView && visible && !userPaused}
             held={held}
             onError={() => setFailed(true)}
-            className={
-              "hero-video-clip absolute inset-0 size-full object-cover" +
-              (variant === "ai" ? " md:object-right" : "")
-            }
           />
         )}
-        <div className={`hero-scrim hero-scrim-${variant} absolute inset-0`} />
+        <div className="hero-scrim absolute inset-0" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-linear-to-b from-transparent to-background" />
       </div>
       {enabled && !held && (

@@ -64,7 +64,11 @@ export function Navbar() {
   const navigate = useCallback(
     (id: string) => {
       const el = document.getElementById(id);
-      if (!el) return;
+      // Not on the home page (e.g. the 404 page): go there instead.
+      if (!el) {
+        location.assign(id === "hero" ? "/" : `/#${id}`);
+        return;
+      }
       lockTo(id);
       el.scrollIntoView({
         behavior: reduced ? "auto" : "smooth",

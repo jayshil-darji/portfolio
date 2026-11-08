@@ -14,7 +14,9 @@
  * centre): the scribble path and the ripples originate there.
  * Agents not driven by any build keep their last screen position (being
  * fixed, they travel with the user's scroll) and drift gently via CSS.
- * Only transforms (and the ripple's opacity) are animated.
+ * Only transforms (and the ripple's opacity) are animated, and a value is
+ * only written when it changed: every inline-style / data-* write
+ * invalidates style, and most agents sit still most of the frames.
  */
 
 import { CURSOR_GAP, CURSOR_SIZE, SHOW_LABELS, TASK_LABELS } from "./config";
@@ -60,6 +62,13 @@ export function createSwarm(layer: HTMLElement): Swarm {
     Array.from(a.querySelectorAll<HTMLElement>(".acb-trail")),
   );
   const lastStep = new Int16Array(n).fill(-1);
+  // Last written values (skip unchanged writes).
+  const lastMove: string[] = new Array(n).fill("");
+  const lastBody: string[] = new Array(n).fill("");
+  const lastFlags: string[] = new Array(n).fill("");
+  const setAttr = (el: HTMLElement, key: string, value: string) => {
+    if (el.dataset[key] !== value) el.dataset[key] = value;
+  };
   const tilt = new Float32Array(n);
   const pressUntil = new Float64Array(n);
   // Orb trail history: TRAIL_LEN (x, y) pairs per agent, ring-indexed.
@@ -153,7 +162,7 @@ export function createSwarm(layer: HTMLElement): Swarm {
         if (!moved) break;
       }
 
-      layer.dataset.moving = "true";
+      setAttr(layer, "moving", "true");
       for (let k = 0; k < frames.length; k++) {
         const f = frames[k];
         const i = f.id;
@@ -163,10 +172,16 @@ export function createSwarm(layer: HTMLElement): Swarm {
         const moving = Math.abs(dx) + Math.abs(dy) > 0.6;
         screen[i].x = p.x;
         screen[i].y = p.y;
-        agents[i].style.transform =
-          `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0)`;
-        agents[i].dataset.working = String(f.progress >= 0);
-        agents[i].dataset.travel = String(moving && f.progress < 0);
+        const move = `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0)`;
+        if (move !== lastMove[i]) agents[i].style.transform = lastMove[i] = move;
+        const working = f.progress >= 0;
+        const travel = moving && !working;
+        const flags = `${working}${travel}`;
+        if (flags !== lastFlags[i]) {
+          lastFlags[i] = flags;
+          agents[i].dataset.working = String(working);
+          agents[i].dataset.travel = String(travel);
+        }
 
         // Click ripple + press at every other scribble waypoint.
         if (f.step > lastStep[i] && f.step >= 0 && f.step % 2 === 0) {
@@ -179,8 +194,10 @@ export function createSwarm(layer: HTMLElement): Swarm {
         const want = moving ? Math.max(-14, Math.min(14, dx * 1.6)) : 0;
         tilt[i] += (want - tilt[i]) * 0.2;
         const scale = now < pressUntil[i] ? 0.9 : 1;
-        bodies[i].style.transform =
-          `rotate(${tilt[i].toFixed(2)}deg) scale(${scale})`;
+        // Snap a nearly settled tilt to 0 so a still agent stops writing.
+        if (!moving && Math.abs(tilt[i]) < 0.05) tilt[i] = 0;
+        const body = `rotate(${tilt[i].toFixed(2)}deg) scale(${scale})`;
+        if (body !== lastBody[i]) bodies[i].style.transform = lastBody[i] = body;
 
         // Orb trail: push the current position; dots trail at fixed lags;
         // a stopped orb collapses its trail onto itself.
@@ -209,11 +226,11 @@ export function createSwarm(layer: HTMLElement): Swarm {
       }
     },
     leave() {
-      layer.dataset.leaving = "true";
-      layer.dataset.moving = "false";
+      setAttr(layer, "leaving", "true");
+      setAttr(layer, "moving", "false");
     },
     back() {
-      layer.dataset.leaving = "false";
+      setAttr(layer, "leaving", "false");
     },
   };
 }

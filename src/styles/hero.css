@@ -30,8 +30,8 @@
   color: oklch(0.86 0.1 220);
 }
 
-/* Fade-in from transparent up to the element's own opacity (the rays
-   backdrop in hero-rays.css, the video pause toggle). */
+/* Fade-in from transparent up to the element's own opacity (the video
+   pause toggle). */
 @keyframes hero-fade {
   from {
     opacity: 0;
@@ -82,51 +82,41 @@
   }
 }
 
-/* ---------- Video backdrop ("ai" / "coded", hero-video-background.tsx) ----------
-   Clips stay invisible (the poster shows) until their first frame is up;
-   the first one fades in over the poster, later ones (coded: intro → loop)
-   swap instantly over the previous clip's held last frame. */
+/* ---------- Video backdrop (hero-video-background.tsx) ----------
+   The clip stays invisible (the poster shows) until its first frame is
+   up, then fades in over the poster. */
 .hero-video-clip {
   opacity: 0;
   transition: opacity 0.4s ease-out;
-}
-.hero-video-clip + .hero-video-clip {
-  transition: none;
 }
 .hero-video-clip[data-shown="true"] {
   opacity: 1;
 }
 
-/* Readability scrims (rgb(5 8 15) ≈ the page background, tinted blue). */
-.hero-scrim-ai {
-  /* Centred layout below 1024px: a vertical overlay plus a soft dark
-     ellipse behind the centred text block (the monitors glow under it). */
-  background:
-    radial-gradient(
-      ellipse 80% 34% at 50% 50%,
-      rgb(5 8 15 / 0.7),
-      transparent 100%
-    ),
-    linear-gradient(
-      to bottom,
-      rgb(5 8 15 / 0.6) 0%,
-      rgb(5 8 15 / 0.5) 45%,
-      rgb(5 8 15 / 0.7) 100%
-    );
+/* Per-option overlay + object-position (HERO_BACKDROPS, set as inline
+   vars on the backdrop): --x below 768px, --x-md from 768px, --x-lg from
+   1024px; a missing breakpoint falls back to the next smaller one. */
+.hero-scrim {
+  background: var(--scrim);
 }
-@media (min-width: 1024px) {
-  /* Left-aligned content over the empty left half of the frame. */
-  .hero-scrim-ai {
-    background: linear-gradient(
-      to right,
-      rgb(5 8 15 / 0.7) 0%,
-      rgb(5 8 15 / 0.62) 42%,
-      transparent 72%
-    );
+.hero-media {
+  object-position: var(--pos, center);
+}
+@media (min-width: 768px) {
+  .hero-scrim {
+    background: var(--scrim-md, var(--scrim));
+  }
+  .hero-media {
+    object-position: var(--pos-md, var(--pos, center));
   }
 }
-.hero-scrim-coded {
-  background: rgb(5 8 15 / 0.4);
+@media (min-width: 1024px) {
+  .hero-scrim {
+    background: var(--scrim-lg, var(--scrim-md, var(--scrim)));
+  }
+  .hero-media {
+    object-position: var(--pos-lg, var(--pos-md, var(--pos, center)));
+  }
 }
 
 /* Pause / play toggle: appears when the video starts. */
@@ -134,7 +124,7 @@
   animation: hero-fade 0.6s ease-out both;
 }
 
-/* ---------- "ai" left-aligned layout (≥1024px) ----------
+/* ---------- Left-aligned layout (≥1024px, HERO_BACKDROPS align) ----------
    MorphText centres its absolutely positioned words with an inline
    left: 50% + a keyframed translate(-50%); the independent `translate`
    property adds the half width back, so each word starts at the left edge

@@ -1,10 +1,10 @@
 "use client";
 
 import {
+  ArrowUpRight,
   Award,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
   Lock,
 } from "lucide-react";
 import { motion, type Transition } from "motion/react";
@@ -16,32 +16,57 @@ import ExpandableBentoGrid, {
   type BentoItem,
   type BentoState,
 } from "@/components/ui/expandable-bento-grid";
-import type { Project } from "@/data/profile";
+import type { Project, ProjectStatus } from "@/data/profile";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 import { bentoSpans } from "./bento-layout";
 import { ProjectCover } from "./project-cover";
 
-const typeLabel = (p: Project) =>
-  `${p.type === "professional" ? "Professional" : "Personal"}${p.typeNote ? ` · ${p.typeNote}` : ""}`;
+/** Status chip: label + dot / tint classes (≥3:1 tints on the dark tile). */
+const STATUS: Record<
+  ProjectStatus,
+  { label: string; tone: string; dot: string }
+> = {
+  live: {
+    label: "Live",
+    tone: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
+    dot: "bg-emerald-400",
+  },
+  "in-development": {
+    label: "In development",
+    tone: "border-amber-300/30 bg-amber-300/10 text-amber-200",
+    dot: "bg-amber-300",
+  },
+  client: {
+    label: "Professional",
+    tone: "border-sky-300/25 bg-sky-300/10 text-sky-200",
+    dot: "bg-sky-300",
+  },
+};
 
 /** Shared-layout id: the cover morphs between its collapsed and expanded
  *  boxes (same element identity across the two renders). */
 const coverId = (p: Project) => `project-cover-${p.slug}`;
 
-function TypeBadges({ p }: { p: Project }) {
+function StatusBadges({ p }: { p: Project }) {
+  const st = STATUS[p.status];
   return (
     <span className="flex flex-wrap items-center gap-2 text-[11px] font-medium tracking-widest text-muted-foreground uppercase">
       <span
         className={cn(
-          "size-1.5 rounded-full",
-          p.type === "professional" ? "bg-sky-300" : "bg-violet-300",
+          "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5",
+          st.tone,
         )}
-        aria-hidden="true"
-      />
-      {typeLabel(p)}
+      >
+        <span
+          className={cn("size-1.5 rounded-full", st.dot)}
+          aria-hidden="true"
+        />
+        {st.label}
+      </span>
+      {p.typeNote && <span>{p.typeNote}</span>}
       {p.award && (
-        <span className="ml-1 inline-flex items-center gap-1 rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 tracking-wider text-amber-200 normal-case">
+        <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 tracking-wider text-amber-200 normal-case">
           <Award className="size-3" aria-hidden="true" />
           {p.award}
         </span>
@@ -117,13 +142,18 @@ function Collapsed({
       </motion.span>
 
       <span className="flex min-w-0 flex-1 flex-col p-5 sm:p-6">
-        <TypeBadges p={p} />
+        <StatusBadges p={p} />
 
         <span className="mt-3 block text-xl font-semibold tracking-tight sm:text-2xl">
           {p.name}
           {p.tagline && (
             <span className="block text-sm font-normal text-muted-foreground sm:text-base">
               {p.tagline}
+            </span>
+          )}
+          {p.byline && (
+            <span className="mt-1 block text-xs font-normal text-muted-foreground">
+              {p.byline}
             </span>
           )}
         </span>
@@ -174,7 +204,8 @@ function Expanded({
   coverTransition: Transition;
   reduced: boolean;
 }) {
-  const hasLinks = !!(p.links?.live || p.links?.repo || p.links?.caseStudy);
+  const live = p.links?.live;
+  const github = p.repo === "public" ? p.links?.github : undefined;
   return (
     <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,45%)_minmax(0,1fr)] lg:gap-8 lg:p-7">
       <motion.div
@@ -184,7 +215,11 @@ function Expanded({
       >
         <ProjectCover
           project={p}
-          sizes="(min-width: 1024px) 520px, 100vw"
+          // ≥1280: the 45% column of a max-w-6xl tile (~500px); 1024–1279:
+          // ~45vw; below: full width. The browser multiplies by DPR, so
+          // the served file is at least as wide as the displayed pixels
+          // (no upscaling blur on the screenshot text).
+          sizes="(min-width: 1280px) 520px, (min-width: 1024px) 45vw, 100vw"
           className="transition-transform duration-700 ease-out group-hover:scale-[1.04]"
         />
       </motion.div>
@@ -204,7 +239,7 @@ function Expanded({
       >
         {/* pr: room for the corner collapse button. */}
         <div className="pr-12">
-          <TypeBadges p={p} />
+          <StatusBadges p={p} />
         </div>
         <p className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
           {p.name}
@@ -213,6 +248,9 @@ function Expanded({
           <p className="text-sm text-muted-foreground sm:text-base">
             {p.tagline}
           </p>
+        )}
+        {p.byline && (
+          <p className="mt-1 text-xs text-muted-foreground">{p.byline}</p>
         )}
         <p className="mt-4 text-base leading-relaxed text-foreground/90">
           {p.summary}
@@ -268,53 +306,58 @@ function Expanded({
           ))}
         </ul>
 
-        <div className="mt-6">
-          {p.type === "professional" ? (
+        {p.note && (
+          <p className="mt-6 text-sm leading-relaxed text-foreground/80">
+            {p.note}
+            {p.noteLink && (
+              <>
+                {" "}
+                <a
+                  href={p.noteLink.href}
+                  className="font-medium whitespace-nowrap text-sky-200 underline decoration-sky-200/40 underline-offset-4 transition-colors hover:decoration-sky-200 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  {p.noteLink.label}
+                </a>
+              </>
+            )}
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+          {live && (
+            <ProjectLink href={live} primary>
+              {p.links?.liveLabel ?? "Open live app"}
+            </ProjectLink>
+          )}
+          {github && (
+            <ProjectLink href={github} icon={<GitHubIcon className="size-4" />}>
+              GitHub
+            </ProjectLink>
+          )}
+          {p.repo === "private" && (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Lock className="size-4" aria-hidden="true" />
-              Client project · code under NDA
+              {p.status === "client"
+                ? "Client project · code under NDA"
+                : "Private repo"}
             </p>
-          ) : hasLinks ? (
-            <div className="flex flex-wrap gap-2">
-              {p.links?.live && (
-                <ProjectLink
-                  href={p.links.live}
-                  icon={<ExternalLink className="size-4" />}
-                >
-                  Live
-                </ProjectLink>
-              )}
-              {p.links?.repo && (
-                <ProjectLink
-                  href={p.links.repo}
-                  icon={<GitHubIcon className="size-4" />}
-                >
-                  GitHub
-                </ProjectLink>
-              )}
-              {p.links?.caseStudy && (
-                <ProjectLink
-                  href={p.links.caseStudy}
-                  icon={<ExternalLink className="size-4" />}
-                >
-                  Case study
-                </ProjectLink>
-              )}
-            </div>
-          ) : null}
+          )}
         </div>
       </motion.div>
     </div>
   );
 }
 
+/** External link (new tab). `primary`: filled CTA with a ↗ arrow. */
 function ProjectLink({
   href,
   icon,
+  primary,
   children,
 }: {
   href: string;
-  icon: ReactNode;
+  icon?: ReactNode;
+  primary?: boolean;
   children: string;
 }) {
   return (
@@ -322,10 +365,16 @@ function ProjectLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium transition-colors hover:border-sky-300/50 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        primary
+          ? "bg-foreground text-background hover:bg-sky-100"
+          : "border border-white/15 bg-white/5 hover:border-sky-300/50 hover:bg-white/10",
+      )}
     >
-      <span aria-hidden="true">{icon}</span>
+      {icon && <span aria-hidden="true">{icon}</span>}
       {children}
+      {primary && <ArrowUpRight aria-hidden="true" className="size-4" />}
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   );

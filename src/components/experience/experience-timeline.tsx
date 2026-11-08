@@ -44,7 +44,12 @@ const TRIGGER_LINE = 0.8;
 const years = (e: ExperienceEntry) =>
   e.kind === "now"
     ? "Now"
-    : `${e.start} – ${e.end === "present" ? "Present" : e.end}`;
+    : [
+        e.period ?? `${e.start} – ${e.end === "present" ? "Present" : e.end}`,
+        e.location,
+      ]
+        .filter(Boolean)
+        .join(" · ");
 
 /**
  * Scroll-drawn milestone timeline.
@@ -310,6 +315,11 @@ function RoleCard({ role }: { role: ExperienceRole }) {
                   className="tl-subnode absolute top-1.5 -left-6 block size-[11px] rounded-full border-2 border-background"
                 />
                 <p className="font-medium leading-snug">{m.title}</p>
+                {m.tech && (
+                  <p className="mt-0.5 font-mono text-[11px] tracking-wide text-muted-foreground/80">
+                    {m.tech}
+                  </p>
+                )}
                 <p className="mt-0.5 text-sm text-muted-foreground">{m.text}</p>
                 {m.badge && (
                   <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[11px] font-medium text-amber-200">

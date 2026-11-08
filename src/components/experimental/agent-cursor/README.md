@@ -2,7 +2,7 @@
 
 The real site builds itself section by section as you scroll. One
 persistent swarm of 12 agent cursors travels with you and divides the work
-of each section (choreography modelled on the stills in `reference/`).
+of each section.
 
 Each section runs through three phases:
 
@@ -117,7 +117,11 @@ Switch: `AGENT_CURSOR_ENABLED` in `config.ts`. Other settings there:
     while the builder runs.
   - `useBuilt(id)`: the stats count-up and the name loop start on reveal.
   - `[data-acb-pending]` pauses CSS animations inside unbuilt units: roles
-    morph, rays, marquee, light-lines and rotating borders start when built.
+    morph, marquee, light-lines and rotating borders start when built.
+  - `useBuildHold(id)`: JS-driven media waits for its unit — the hero
+    video stays on its poster until the background layer is built (or the
+    pre-paint gate still holds the hero), then plays from 0; Replay
+    rewinds it.
 - **Swarm** (`swarm.ts`): one fixed viewport layer.
   - It converts sampled page positions with the current scroll, from rects
     cached per session start/resize — never measured per frame.
@@ -148,7 +152,6 @@ Switch: `AGENT_CURSOR_ENABLED` in `config.ts`. Other settings there:
 | `gsap.ts`        | lazy                 | GSAP + ScrollTrigger (scrub mode)                          |
 | `seeded.ts`      | lazy                 | deterministic PRNG                                         |
 | `build.css`      | lazy                 | all styles (no Tailwind classes)                           |
-| `reference/`     | —                    | reference stills (not bundled)                             |
 
 \* The loader sits next to the literal flag. Two reasons:
 
@@ -164,7 +167,8 @@ Switch: `AGENT_CURSOR_ENABLED` in `config.ts`. Other settings there:
   - `app/page.tsx`: `<BuildRoot />`.
 - **Units (`agentBuildAttrs`):**
   - `sections/hero.tsx`;
-  - `backgrounds/hero-background.tsx`;
+  - `hero/hero-video-background.tsx` (the background layer, id `hero-bg`;
+    `useBuildHold`);
   - `layout/section-heading.tsx` (eyebrow + heading);
   - `sections/about.tsx` + `about/about-photo.tsx` (`wrapperProps`);
   - `currently/currently-cards.tsx`;

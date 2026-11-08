@@ -60,15 +60,6 @@ export function createHudStore() {
 }
 export type HudStore = ReturnType<typeof createHudStore>;
 
-function subscribeScroll(cb: () => void) {
-  addEventListener("scroll", cb, { passive: true });
-  addEventListener("resize", cb);
-  return () => {
-    removeEventListener("scroll", cb);
-    removeEventListener("resize", cb);
-  };
-}
-
 /**
  * Hidden whenever it would cover content: while the hero's "Scroll" cue is
  * on screen (it owns the bottom of the hero), and while its box overlaps
@@ -117,13 +108,40 @@ export function Hud({
   // While the HUD offers a tour action it's always shown at the top (it's
   // in the bottom-left corner, clear of the hero's scroll cue).
   const actionable = s.tour !== "off";
-  const getCovering = useCallback(
-    () => covers(ref.current, actionable),
-    [actionable],
+  // covers() reads a rect per build unit: measured at most once per frame
+  // (rAF-coalesced scroll/resize), never per scroll event or per render.
+  const coveringRef = useRef(true);
+  const subscribeCovering = useCallback(
+    (cb: () => void) => {
+      let raf = 0;
+      const measure = () => {
+        raf = 0;
+        const v = covers(ref.current, actionable);
+        if (v !== coveringRef.current) {
+          coveringRef.current = v;
+          cb();
+        }
+      };
+      const schedule = () => {
+        if (!raf) raf = requestAnimationFrame(measure);
+      };
+      addEventListener("scroll", schedule, { passive: true });
+      addEventListener("resize", schedule);
+      // HUD content changes (its own size, units being built) re-check too.
+      const unsubscribe = store.subscribe(schedule);
+      schedule();
+      return () => {
+        cancelAnimationFrame(raf);
+        unsubscribe();
+        removeEventListener("scroll", schedule);
+        removeEventListener("resize", schedule);
+      };
+    },
+    [actionable, store],
   );
   const covering = useSyncExternalStore(
-    subscribeScroll,
-    getCovering,
+    subscribeCovering,
+    () => coveringRef.current,
     () => true,
   );
   const touring = s.tour === "touring" || s.tour === "returning";

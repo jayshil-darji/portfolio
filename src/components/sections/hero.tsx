@@ -2,12 +2,12 @@ import type { CSSProperties } from "react";
 import { ArrowDownRight } from "lucide-react";
 import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { HeroName } from "@/components/hero/hero-name";
-import { HeroBackdrop } from "@/components/hero/hero-backdrop";
+import { HeroVideoBackground } from "@/components/hero/hero-video-background";
 import { Section } from "@/components/layout/section";
 import { CreepyButton } from "@/components/ui/creepy-button";
 import { MorphText } from "@/components/ui/morph-text";
 import SocialFlipButton from "@/components/ui/social-flip-button";
-import { HERO_BACKGROUND } from "@/data/hero-background";
+import { HERO_BACKDROPS, HERO_BACKGROUND } from "@/data/hero-background";
 import { profile } from "@/data/profile";
 import { SOCIAL_ITEMS } from "@/lib/social-items";
 import { cn } from "@/lib/utils";
@@ -19,8 +19,8 @@ const delay = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
  *  to it so the two never animate at the same moment. */
 const ROLE_INTERVAL_MS = 3500;
 
-/** "ai": the character sits on the right → content in the left half (lg+). */
-const LEFT = HERO_BACKGROUND === "ai";
+/** The backdrop's subject sits on the right → content in the left half (lg+). */
+const LEFT = HERO_BACKDROPS[HERO_BACKGROUND].align === "left";
 
 export function Hero() {
   return (
@@ -29,7 +29,7 @@ export function Hero() {
       // Full-bleed and full-viewport; pulled up under the translucent navbar.
       className="relative isolate -mt-[var(--nav-height)] flex min-h-svh max-w-none flex-col items-center justify-center overflow-hidden px-0 pt-28 pb-24 sm:px-0 md:py-32"
     >
-      <HeroBackdrop />
+      <HeroVideoBackground variant={HERO_BACKGROUND} />
 
       <div
         className={cn(

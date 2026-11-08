@@ -67,11 +67,15 @@ export function About() {
             ))}
           </div>
 
-          <dl className="mt-10 grid grid-cols-3 gap-4 border-t border-border pt-8 sm:gap-6">
+          {/* lg: content-sized columns, equal gaps (justify-between), so the
+              longest label stays on one line. */}
+          <dl className="mt-10 grid grid-cols-3 gap-4 border-t border-border pt-8 sm:gap-6 lg:grid-cols-[repeat(3,auto)] lg:justify-between">
             {profile.stats.map((stat, i) => (
               <div
                 key={stat.label}
-                className="flex flex-col-reverse gap-1"
+                // justify-end = packed at the top in a reversed column: the
+                // numbers line up even when one label wraps to 2 lines.
+                className="flex flex-col-reverse justify-end gap-1"
                 {...agentBuildAttrs("block", `about-stat-${i}`)}
               >
                 <dt className="text-xs leading-snug text-muted-foreground sm:text-sm">

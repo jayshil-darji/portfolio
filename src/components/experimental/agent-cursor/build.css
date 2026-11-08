@@ -19,7 +19,7 @@
   will-change: opacity;
 }
 
-/* Units not built yet: their CSS animations (roles morph, rays, marquee,
+/* Units not built yet: their CSS animations (roles morph, marquee,
    light-lines, rotating borders) wait and start on reveal. */
 [data-acb-pending],
 [data-acb-pending] * {
@@ -224,6 +224,12 @@ html[data-acb-site] #projects [role="list"] > li {
 .acb-agent:nth-child(3n) .acb-agent-drift {
   animation-duration: 4.4s;
   animation-delay: -2.1s;
+}
+/* Swarm gone (everything built): stop the drift. It runs on the main
+   thread (a 0×0 element isn't composited) and would restyle 12 agents
+   every frame for nothing. */
+.acb-swarm[data-leaving="true"] .acb-agent-drift {
+  animation-play-state: paused;
 }
 /* Small enough that neighbours' drift can't close CURSOR_GAP. */
 @keyframes vui-acb-drift {

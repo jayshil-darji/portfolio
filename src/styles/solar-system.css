@@ -250,7 +250,13 @@
   box-shadow: 0 0 8px var(--c);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s;
+  /* Hidden lasers would each keep a composited layer (they sit in the 3D
+     orbit, 22 of them): visibility drops them. It flips after the fade-out
+     and immediately on show, so the 0.3s fades look the same. */
+  visibility: hidden;
+  transition:
+    opacity 0.3s,
+    visibility 0s 0.3s;
 }
 
 .ss-orbiter:has(
@@ -260,6 +266,10 @@
   )
   .ss-laser {
   opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.3s,
+    visibility 0s;
 }
 
 /* Filter: planets outside the highlighted set recede. */

@@ -520,8 +520,11 @@ export default function Builder({ agents }: { agents: number }) {
         (g) => state.get(g) === "building" && waiting.get(g)?.some(near),
       );
       if (waitingGroups) pump();
-      if (sessions.some((s) => !s.done && !s.scrub) || waitingGroups)
-        raf = requestAnimationFrame(tick);
+      // loop(), not a bare requestAnimationFrame: a session started during
+      // this tick (endSession → pump → assign) has already scheduled the
+      // next frame, and overwriting `raf` here orphaned that request, so
+      // tick chains piled up (several full renders per frame).
+      if (sessions.some((s) => !s.done && !s.scrub) || waitingGroups) loop();
       else {
         last = 0;
         layer.dataset.moving = "false";
@@ -610,6 +613,9 @@ export default function Builder({ agents }: { agents: number }) {
     let maxTimer: number | undefined;
     const check = () => {
       rafCheck = 0;
+      // Nothing left to start or fast-forward (everything built, the
+      // normal state after the first pass): no layout reads per scroll.
+      if (groups.every((g) => state.get(g) === "built")) return;
       const vh = innerHeight;
       const passed =
         document.querySelector("body header")?.getBoundingClientRect().bottom ??
@@ -620,8 +626,9 @@ export default function Builder({ agents }: { agents: number }) {
       // bottom band, so they're done while still visible.
       const line = tourScrolling ? TOUR_START_LINE : START_LINE;
       for (const g of groups) {
-        const r = g.root.getBoundingClientRect();
         const st = state.get(g);
+        if (st === "built") continue;
+        const r = g.root.getBoundingClientRect();
         if (st === "pending") {
           if (r.bottom <= passed)
             instant(g); // passed without being seen
