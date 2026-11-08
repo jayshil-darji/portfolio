@@ -4,6 +4,7 @@ import { motion, useInView } from "motion/react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { useBuildActive } from "@/components/experimental/agent-cursor/build-state";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 
@@ -26,26 +27,32 @@ interface AboutPhotoProps {
   label: string;
   /** Shown in the fallback monogram when the image can't load. */
   initials: string;
+  /** data-* attributes for the outer wrapper (agent-cursor build target). */
+  wrapperProps?: { [key: `data-${string}`]: string | undefined };
 }
 
 const EASE_IN_OUT = [0.77, 0, 0.175, 1] as const;
 
 /**
- * Particle tuning. The whole source image is used as-is (no subject mask —
- * the office background is part of the look). A low threshold keeps the
- * facial shading.
+ * Particle tuning for the background-removed cutout (profile.photoCutout):
+ * transparent pixels are dropped by the sampler, so only the subject is
+ * sampled. That frees the budget the office background used to take, so
+ * the grid is finer at the same cost as the old full photo (~55k
+ * particles on pointer devices vs 59k, ~31k on touch vs 33k), with
+ * slightly smaller dots. threshold 20: darker pixels (the navy blazer)
+ * would render darker than the frame and only cost particles.
  */
 const PARTICLES_POINTER = {
   threshold: 20,
-  size: 1.4,
-  maxDimension: 320,
+  size: 1.25,
+  maxDimension: 400,
   touchRadius: 0.18,
 };
 // Touch / no-hover: ~45% fewer particles, slightly larger, same idle drift.
 const PARTICLES_TOUCH = {
   threshold: 20,
-  size: 1.7,
-  maxDimension: 240,
+  size: 1.5,
+  maxDimension: 300,
   touchRadius: 0.22,
 };
 
@@ -73,6 +80,7 @@ export function AboutPhoto({
   particleSrc,
   label,
   initials,
+  wrapperProps,
 }: AboutPhotoProps) {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [particles, setParticles] = useState<ParticleState>("idle");
@@ -91,6 +99,11 @@ export function AboutPhoto({
   // "near" at page load and pull three.js into the critical path. 150px
   // starts loading ~1 scroll-step before the photo appears.
   const nearView = useInView(wrapperRef, { once: true, margin: "150px 0px" });
+  // EXPERIMENT (agent-cursor): the build reveals the portrait — skip our
+  // own wipe/zoom so it doesn't animate twice.
+  const buildActive = useBuildActive();
+  const shown = inView || buildActive;
+  const revealTransition = buildActive ? { duration: 0 } : undefined;
 
   const failed = particles === "no-webgl" || particles === "low-fps";
   const wantParticles = nearView && !reduced && !failed;
@@ -106,6 +119,7 @@ export function AboutPhoto({
 
   return (
     <div
+      {...wrapperProps}
       ref={wrapperRef}
       className="mx-auto w-full max-w-[20rem] md:max-w-none"
     >
@@ -116,9 +130,9 @@ export function AboutPhoto({
         className="reveal-clip relative aspect-[912/1177] w-full overflow-hidden rounded-2xl bg-neutral-900"
         initial={{ clipPath: "inset(100% 0% 0% 0%)" }}
         animate={{
-          clipPath: inView ? "inset(0% 0% 0% 0%)" : "inset(100% 0% 0% 0%)",
+          clipPath: shown ? "inset(0% 0% 0% 0%)" : "inset(100% 0% 0% 0%)",
         }}
-        transition={{ duration: 1.2, ease: EASE_IN_OUT }}
+        transition={revealTransition ?? { duration: 1.2, ease: EASE_IN_OUT }}
       >
         {/* Real photo: placeholder → fallback. Decorative inside role=img. */}
         {photoFailed ? (
@@ -131,8 +145,8 @@ export function AboutPhoto({
               showParticles && "opacity-0",
             )}
             initial={{ scale: 1.25 }}
-            animate={{ scale: inView ? 1 : 1.25 }}
-            transition={{ duration: 1.6, ease: EASE_IN_OUT }}
+            animate={{ scale: shown ? 1 : 1.25 }}
+            transition={revealTransition ?? { duration: 1.6, ease: EASE_IN_OUT }}
           >
             <Image
               ref={checkBroken}

@@ -74,6 +74,8 @@ export type MilestoneIcon = "trophy" | "medal";
 /** A notable piece of work within a role. No dates — order is enough. */
 export interface Milestone {
   title: string;
+  /** Small muted tech line under the title, e.g. "Angular 9 · Ionic 4". */
+  tech?: string;
   text: string;
   /** Award / recognition, shown as a small chip. */
   badge?: string;
@@ -88,6 +90,9 @@ export interface ExperienceRole {
   start: string;
   /** "YYYY" or "present" */
   end: string;
+  /** Display override for the dates, e.g. "Jan – Jun 2016" (else start – end). */
+  period?: string;
+  location?: string;
   summary?: string;
   milestones: Milestone[];
 }
@@ -103,10 +108,19 @@ export type ExperienceEntry = ExperienceRole | ExperienceNow;
 
 export type ProjectType = "professional" | "personal";
 
+/**
+ * live: shipped and public ("Live" chip). in-development: work in progress
+ * ("In development" chip). client: professional client work (the
+ * "Professional" label).
+ */
+export type ProjectStatus = "live" | "in-development" | "client";
+
+/** Public links. Only set ones are rendered (never empty / broken links). */
 export interface ProjectLinks {
   live?: string;
-  repo?: string;
-  caseStudy?: string;
+  /** Button label for `live` (default "Open live app"); a ↗ is appended. */
+  liveLabel?: string;
+  github?: string;
 }
 
 export interface Project {
@@ -115,6 +129,8 @@ export interface Project {
   name: string;
   /** Short descriptor shown after the name, e.g. "Business Messaging Platform". */
   tagline?: string;
+  /** Small muted line under the name/tagline, e.g. "Client project at Cygnet.One". */
+  byline?: string;
   type: ProjectType;
   /** Optional qualifier for the type badge, e.g. "Freelance". */
   typeNote?: string;
@@ -122,20 +138,27 @@ export interface Project {
   role?: string;
   /** Company the work was done at (professional projects). */
   company?: string;
+  status: ProjectStatus;
+  /** "private" → a muted "Private repo" note instead of a GitHub link. */
+  repo: "public" | "private";
   summary: string;
   highlights: string[];
   stack: string[];
   /**
-   * Public links. Professional (client/NDA) work usually has none — UI must
-   * render gracefully when this is missing or empty.
+   * Public links. Client / private work usually has none — UI must render
+   * gracefully when this is missing or empty.
    */
   links?: ProjectLinks;
+  /** A short line in the expanded tile, e.g. "Demo available on request." */
+  note?: string;
+  /** Optional small link after the note (in-page anchors allowed). */
+  noteLink?: { label: string; href: string };
   /**
    * Cover image under /public: "/images/projects/{slug}.jpg", 1600×1000
-   * (16:10, shown uncropped). Swap in a real screenshot by overwriting the
-   * file — no code change. Undefined → a CSS-generated cover.
+   * (16:10, shown uncropped). Replacing a file under the same name: clear
+   * `.next/cache/images` locally (the optimiser caches by URL).
    */
-  image?: string;
+  image: string;
   /** Large tile in the Projects bento. */
   featured: boolean;
   /** Recognition shown as a badge, e.g. "Spot Award". */
@@ -187,10 +210,25 @@ export interface Profile {
   experience: ExperienceEntry[];
   projects: Project[];
   socials: SocialLink[];
+  /**
+   * Site metadata (layout.tsx, manifest, JSON-LD). The site URL is not here:
+   * it comes from NEXT_PUBLIC_SITE_URL (src/lib/site-url.ts).
+   */
   seo: {
+    /** Default <title>; sub-pages use `titleTemplate` ("%s" = page title). */
     title: string;
+    titleTemplate: string;
+    /** Meta / Open Graph description (≤160 characters). */
     description: string;
-    url: string;
+    siteName: string;
+    /** Installed-app name (manifest short_name). */
+    shortName: string;
+    /** Open Graph locale, e.g. "en_IN". */
+    locale: string;
+    firstName: string;
+    lastName: string;
+    /** JSON-LD Person address. */
+    address: { region: string; country: string };
   };
 }
 
@@ -199,28 +237,30 @@ export const profile: Profile = {
   title: "Senior Software Engineer",
   roles: [
     "Senior Software Engineer",
-    "Frontend Engineer",
-    "Full-stack Builder",
+    "Full-stack Developer",
+    "Frontend Lead",
+    "Web Platform Engineer",
   ],
-  tagline: "10 years of building fast, polished, scalable web applications.",
+  tagline:
+    "I build enterprise web platforms end to end, from business messaging to notary office automation.",
   location: "India",
   yearsOfExperience: 10,
   email: "jayshild033@gmail.com",
   photo: "/images/jayshil.jpg",
   photoCutout: "/images/jayshil-cutout.png",
   about: [
-    "I'm a Senior Software Engineer from India, with 10 years of building web applications. At Cygnet.One I lead frontend development on enterprise Angular platforms, from a government notary portal to an omnichannel business messaging platform, mentoring developers and owning code quality and releases. Outside work I build full-stack products with Next.js and Supabase, and I'm now exploring GenAI engineering.",
+    "I'm a Senior Software Engineer from Gujarat, India, with 10 years of building web products. At Cygnet.One I lead frontend development on enterprise platforms, from business messaging to notary office automation, mentoring developers and owning code quality and releases. Outside work I build full-stack products with Next.js and Supabase, and I'm now exploring GenAI engineering.",
   ],
   aboutHighlights: [
     "Cygnet.One",
-    "Angular",
-    "Next.js and Supabase",
+    "enterprise platforms",
+    "full-stack products",
     "GenAI engineering",
   ],
   stats: [
-    { value: 10, suffix: "+", label: "Years experience" },
-    { value: 2, label: "Company awards" },
-    { value: 5, label: "Featured projects" },
+    { value: 10, suffix: "+", label: "Years building software" },
+    { value: 10, suffix: "+", label: "Enterprise modules delivered" },
+    { value: 8, suffix: "+", label: "Products built" },
   ],
   currently: [
     { label: "Learning", text: "Python, as the foundation for GenAI work" },
@@ -291,6 +331,7 @@ const fail = (error: string): Result<never> => ({ ok: false, error });`,
         {
           id: "javascript",
           name: "JavaScript",
+          badge: "Core",
           desc: "The base under every framework I work with.",
           code: {
             lang: "js",
@@ -302,6 +343,7 @@ const byType = Object.groupBy(items, (i) => i.type);`,
         {
           id: "react",
           name: "React",
+          badge: "Core",
           desc: "Used with Next.js for my personal full-stack products.",
           code: {
             lang: "tsx",
@@ -371,34 +413,6 @@ export const config = JSON.parse(raw);`,
 });`,
           },
         },
-        {
-          id: "java",
-          name: "Java",
-          desc: "Worked alongside Java backend services on the Nobilex platform.",
-          code: {
-            lang: "java",
-            file: "Titles.java",
-            source: `public record Document(String id, String title) {}
-
-List<String> titles = documents.stream()
-    .map(Document::title)
-    .toList();`,
-          },
-        },
-        {
-          id: "kotlin",
-          name: "Kotlin",
-          desc: "Worked alongside Kotlin services on the Nobilex platform.",
-          code: {
-            lang: "kotlin",
-            file: "Templates.kt",
-            source: `data class Template(val id: String, val name: String)
-
-val names = templates
-    .filter { it.name.isNotBlank() }
-    .map { it.name }`,
-          },
-        },
       ],
     },
     {
@@ -427,18 +441,6 @@ GROUP BY payer_id;`,
             file: "indexes.sql",
             source: `CREATE INDEX idx_orders_user
   ON orders (user_id, created_at);`,
-          },
-        },
-        {
-          id: "mssql",
-          name: "MSSQL",
-          desc: "SQL Server queries in enterprise projects.",
-          code: {
-            lang: "sql",
-            file: "recent.sql",
-            source: `SELECT TOP (10) Name, CreatedAt
-FROM dbo.Documents
-ORDER BY CreatedAt DESC;`,
           },
         },
         {
@@ -520,21 +522,6 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 CMD ["npm", "start"]`,
-          },
-        },
-        {
-          id: "kubernetes",
-          name: "Kubernetes",
-          desc: "Deployment platform for the Nobilex project.",
-          code: {
-            lang: "yaml",
-            file: "deployment.yaml",
-            source: `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: web
-spec:
-  replicas: 2`,
           },
         },
         {
@@ -642,11 +629,42 @@ chunks = splitter.split_text(document)`,
   experience: [
     {
       kind: "role",
-      company: "Brainvire",
+      company: "RapidOps",
+      role: "Intern",
+      start: "2016",
+      end: "2016",
+      period: "Jan – Jun 2016",
+      location: "Ahmedabad",
+      summary:
+        "Started my career learning the foundations of web development with Angular and JavaScript.",
+      milestones: [],
+    },
+    {
+      kind: "role",
+      company: "Brainvire Infotech",
       role: "Software Engineer",
       start: "2016",
       end: "2020",
-      milestones: [], // TODO(Jayshil): add Brainvire highlights.
+      location: "Ahmedabad",
+      summary:
+        "Built responsive web and cross-platform mobile frontends for client projects using Angular, TypeScript, Ionic and Cordova, integrating third-party REST APIs and working with cross-functional teams to deliver on schedule.",
+      milestones: [
+        {
+          title: "FX Connect: community mobile and web app",
+          tech: "Angular 9 · Ionic 4",
+          text: "Built the cross-platform app for a worldwide community, with event creation, social feeds and paid resources.",
+        },
+        {
+          title: "PetBox: pet-care services portal",
+          tech: "Angular · Ant Design",
+          text: "Built the web portal connecting pet owners with local pet sitters, including profiles and service-booking workflows.",
+        },
+        {
+          title: "Arete RAP: project risk assessment tool",
+          tech: "jQuery · Node.js · MongoDB",
+          text: "Built the frontend for quantitative and qualitative risk scoring and schedule-impact analysis.",
+        },
+      ],
     },
     {
       kind: "role",
@@ -658,14 +676,14 @@ chunks = splitter.split_text(document)`,
         "Lead frontend development on enterprise Angular platforms, mentor developers, and own code reviews and releases.",
       milestones: [
         {
-          title: "Nobilex: Government Notary Portal",
-          text: "Led frontend development with Angular and Keycloak RBAC",
+          title: "Nobilex: Notary Office Automation Platform",
+          text: "Frontend lead on 4 large modules in a 16-person team; managed production releases on Kubernetes (GCP)",
           badge: "Client accolades",
           icon: "medal",
         },
         {
           title: "Kero: Business Messaging Platform",
-          text: "Built messaging, media and campaign features in Angular 20",
+          text: "Built 6+ modules of the Angular 20 app in a 6-person team",
           badge: "Spot Award",
           icon: "trophy",
         },
@@ -684,17 +702,21 @@ chunks = splitter.split_text(document)`,
       award: "Spot Award",
       name: "Kero",
       tagline: "Business Messaging Platform",
+      byline: "Client project at Cygnet.One",
       type: "professional",
+      status: "client",
+      repo: "private",
       role: "Developer",
       company: "Cygnet.One",
       summary:
-        "Omnichannel business messaging platform for RCS, WhatsApp Business and SMS, with campaigns, contacts, rich media and analytics.",
+        "A business messaging platform that brings RCS, WhatsApp and SMS together in one dashboard, used by companies in the UK and South Africa for campaigns and customer communication.",
       highlights: [
-        "Integrated REST APIs for messaging workflows, media and dynamic campaigns",
+        "Built 6+ feature modules of the Angular 20 web app in a 6-person team",
+        "Integrated REST APIs for messaging workflows, rich media and campaign management",
         "Built responsive features with Angular Material and modern Angular patterns",
-        "Led development initiatives, code reviews and production issue resolution",
-        "Received a Spot Award for this project",
+        "Investigated and fixed production issues, and did code reviews",
       ],
+      links: { live: "https://kero.chat", liveLabel: "Product site" },
       stack: [
         "Angular 20",
         "Angular Material",
@@ -710,19 +732,23 @@ chunks = splitter.split_text(document)`,
       image: "/images/projects/nobilex.jpg",
       award: "Client accolades",
       name: "Nobilex",
-      tagline: "Government Notary Portal",
+      tagline: "Notary Office Automation Platform",
+      byline: "Client project at Cygnet.One",
       type: "professional",
+      status: "client",
+      repo: "private",
       role: "Frontend Lead",
       company: "Cygnet.One",
       summary:
-        "Secure, government-authorised notary processing system with management and client portals for users, document templates, email configuration and sensitive notary data.",
+        "A cloud-native office-automation and case-management platform for Dutch notary firms, with management and client portals, document templates and secure handling of sensitive notarial data.",
       highlights: [
+        "Delivered 4 large modules as frontend lead in a 16-person team",
         "Implemented Keycloak authentication with role-based access control",
-        "Led frontend development and mentored junior developers",
-        "Owned code reviews, releases and deployments",
-        "Worked directly with the client and guided the BA team on module design",
-        "Received accolades for this project",
+        "Managed production releases on Kubernetes (GCP)",
+        "Mentored junior developers and guided the BA team on module design",
+        "Worked directly with the client to clarify requirements and resolve issues",
       ],
+      links: { live: "https://nobilex.nl", liveLabel: "Product site" },
       stack: [
         "Angular 16",
         "Keycloak",
@@ -739,12 +765,15 @@ chunks = splitter.split_text(document)`,
       image: "/images/projects/tripsplit.jpg",
       name: "TripSplit",
       type: "personal",
+      status: "live",
+      repo: "private",
       summary:
-        "Mobile-first PWA for tracking group trip expenses that settles everyone up with the fewest possible payments.",
+        "A mobile-first PWA for tracking group trip expenses. Friends log shared costs as they travel, and when the trip ends everyone settles up with one clean number.",
       highlights: [
-        "Equal, custom, percentage and share-based splits that always sum to the exact total",
-        "Greedy debt-simplification algorithm for near-minimal settlements",
-        "Placeholder members whose expenses merge automatically when they sign up with a matching phone or email",
+        "Equal, custom, percentage and share-based splits that always add up to the exact total",
+        "Greedy debt-simplification reduces group balances to the fewest possible payments",
+        "Add friends who haven't signed up; their history merges automatically when they join with the same phone or email",
+        "Installable PWA with passwordless email-code and Google sign-in",
       ],
       stack: [
         "Next.js",
@@ -754,7 +783,7 @@ chunks = splitter.split_text(document)`,
         "PostgreSQL",
         "Tailwind CSS",
       ],
-      // TODO: add links: { live: "…", repo: "…" }
+      links: { live: "https://www.tripssplit.app" },
       featured: false,
     },
     {
@@ -762,8 +791,10 @@ chunks = splitter.split_text(document)`,
       image: "/images/projects/fitnesshub.jpg",
       name: "FitnessHub",
       type: "personal",
+      status: "in-development",
+      repo: "private",
       summary:
-        "Full-stack gym management platform with Owner, Trainer and Member portals and automated WhatsApp reminders.",
+        "A full-stack gym management platform with separate portals for owners, trainers and members, covering memberships, payments, workout and diet plans, PT sessions and automated WhatsApp reminders.",
       highlights: [
         "Secure auth with NextAuth.js and bcrypt",
         "RBAC with 10 configurable trainer permissions",
@@ -781,7 +812,8 @@ chunks = splitter.split_text(document)`,
         "Sanity CMS",
         "Tailwind CSS",
       ],
-      // TODO: add links: { live: "…", repo: "…" }
+      note: "Currently in development with a client. Demo available on request.",
+      noteLink: { label: "Request a demo", href: "#contact" },
       featured: false,
     },
     {
@@ -790,12 +822,15 @@ chunks = splitter.split_text(document)`,
       name: "OMG EV Vehicles",
       type: "personal",
       typeNote: "Freelance",
+      status: "in-development",
+      repo: "private",
       summary:
-        "SEO-optimised marketing and lead-generation site for an electric two-wheeler showroom in Visnagar, Gujarat.",
+        "A marketing and lead-generation website for an electric two-wheeler showroom in Visnagar, Gujarat.",
       highlights: [
         "Sanity CMS with custom content schemas",
         "Interactive petrol-vs-EV savings and EMI calculators",
         "Test-ride and enquiry forms connected to WhatsApp and Web3Forms",
+        "Model comparison for up to 3 scooters side by side",
       ],
       stack: [
         "Next.js 16",
@@ -805,7 +840,8 @@ chunks = splitter.split_text(document)`,
         "Sanity CMS",
         "Web3Forms",
       ],
-      // TODO: add links: { live: "…" }
+      note: "Currently in development with a client. Demo available on request.",
+      noteLink: { label: "Request a demo", href: "#contact" },
       featured: false,
     },
   ],
@@ -827,10 +863,15 @@ chunks = splitter.split_text(document)`,
     },
   ],
   seo: {
-    title: "Jayshil Darji — Senior Software Engineer",
+    title: "Jayshil Darji, Senior Software Engineer",
+    titleTemplate: "%s · Jayshil Darji",
     description:
-      "Jayshil Darji — Senior Software Engineer with 10 years of building fast, polished, scalable web applications with Angular, TypeScript, React and Node.js.",
-    // TODO: replace with the production Vercel URL / custom domain.
-    url: "https://jayshil-portfolio.vercel.app",
+      "Jayshil Darji, Senior Software Engineer with 10 years of building enterprise web platforms end to end, from business messaging to notary office automation.",
+    siteName: "Jayshil Darji",
+    shortName: "Jayshil",
+    locale: "en_IN",
+    firstName: "Jayshil",
+    lastName: "Darji",
+    address: { region: "Gujarat", country: "IN" },
   },
 };

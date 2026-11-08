@@ -1,5 +1,6 @@
 "use client";
 
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { AnimatePresence, motion } from "motion/react";
 import { RotatingBorder } from "@/components/ui/rotating-border";
 import type { SkillItem } from "@/lib/skills-to-orbits";
@@ -22,7 +23,11 @@ export function SkillDetail({
   headingLevel?: "h3" | "h4";
 }) {
   return (
-    <div className={cn("relative", className)} aria-live="polite">
+    <div
+      className={cn("relative", className)}
+      aria-live="polite"
+      {...agentBuildAttrs("block")}
+    >
       <AnimatePresence mode="wait" initial={false}>
         {item ? (
           <motion.div

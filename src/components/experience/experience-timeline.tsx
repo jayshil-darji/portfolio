@@ -1,5 +1,6 @@
 "use client";
 
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { Medal, Trophy, type LucideIcon } from "lucide-react";
 import {
   motion,
@@ -24,6 +25,7 @@ import type {
   ExperienceRole,
   MilestoneIcon,
 } from "@/data/profile";
+import { useBuildActive } from "@/components/experimental/agent-cursor/build-state";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +44,12 @@ const TRIGGER_LINE = 0.8;
 const years = (e: ExperienceEntry) =>
   e.kind === "now"
     ? "Now"
-    : `${e.start} – ${e.end === "present" ? "Present" : e.end}`;
+    : [
+        e.period ?? `${e.start} – ${e.end === "present" ? "Present" : e.end}`,
+        e.location,
+      ]
+        .filter(Boolean)
+        .join(" · ");
 
 /**
  * Scroll-drawn milestone timeline.
@@ -116,6 +123,7 @@ export function ExperienceTimeline({
       {/* Decorative line: track, drawn fill, leading dot. */}
       <div
         aria-hidden="true"
+        {...agentBuildAttrs("image")}
         className="pointer-events-none absolute top-0 bottom-0 left-5 w-0.5 -translate-x-1/2 [mask-image:linear-gradient(to_bottom,black_88%,transparent)] lg:left-1/2"
       >
         <div className="absolute inset-0 rounded-full bg-white/10" />
@@ -168,6 +176,7 @@ function TimelineItem({
   const lit = useTransform(scrollY, [trigger - 16, trigger], [0, 1]);
   const reveal = useTransform(scrollY, [trigger - 80, trigger], [0, 1]);
   const nodeScale = useTransform(lit, [0, 1], [1, 1.3]);
+  const buildActive = useBuildActive();
 
   const left = side === "left";
 
@@ -212,11 +221,18 @@ function TimelineItem({
 
       {/* Card: fades/slides in as the line approaches. */}
       <motion.div
+        {...agentBuildAttrs("block")}
         className={cn(
           "tl-card col-start-2 row-start-2 lg:row-start-1",
           left ? "lg:col-start-1" : "lg:col-start-3",
         )}
-        style={{ "--reveal": reduced ? 1 : reveal } as unknown as CSSProperties}
+        // EXPERIMENT (agent-cursor): inside the build the card is revealed
+        // by the build — no slide-in.
+        style={
+          {
+            "--reveal": reduced || buildActive ? 1 : reveal,
+          } as unknown as CSSProperties
+        }
       >
         {entry.kind === "role" ? (
           <RoleCard role={entry} />
@@ -299,6 +315,11 @@ function RoleCard({ role }: { role: ExperienceRole }) {
                   className="tl-subnode absolute top-1.5 -left-6 block size-[11px] rounded-full border-2 border-background"
                 />
                 <p className="font-medium leading-snug">{m.title}</p>
+                {m.tech && (
+                  <p className="mt-0.5 font-mono text-[11px] tracking-wide text-muted-foreground/80">
+                    {m.tech}
+                  </p>
+                )}
                 <p className="mt-0.5 text-sm text-muted-foreground">{m.text}</p>
                 {m.badge && (
                   <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[11px] font-medium text-amber-200">

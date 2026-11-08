@@ -1,5 +1,6 @@
 "use client";
 
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { SolarSystem } from "@/components/ui/solar-system";
@@ -67,6 +68,7 @@ export function SkillsExplorer({
       <div
         role="group"
         aria-label="Filter skills by area"
+        {...agentBuildAttrs("block")}
         className="-mx-4 mb-8 flex gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden"
       >
         {tabs.map((tab) => {

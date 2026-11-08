@@ -1,3 +1,4 @@
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { Section } from "@/components/layout/section";
 import { SkillsExplorer } from "@/components/skills/skills-explorer";
 import { profile } from "@/data/profile";
@@ -19,7 +20,10 @@ export function Skills() {
       title={profile.skillsIntro.title}
       className="max-w-7xl"
     >
-      <p className="-mt-6 mb-10 max-w-2xl text-base text-muted-foreground sm:text-lg md:-mt-8">
+      <p
+        className="-mt-6 mb-10 max-w-2xl text-base text-muted-foreground sm:text-lg md:-mt-8"
+        {...agentBuildAttrs("text")}
+      >
         {profile.skillsIntro.description}
       </p>
       <SkillIconSprite skills={profile.skills.flatMap((g) => g.skills)} />

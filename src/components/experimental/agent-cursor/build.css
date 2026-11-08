@@ -1,0 +1,517 @@
+/*
+ * Agent-cursor site build styles. Imported only by the lazy builder chunk
+ * → not in the global CSS when the flag is off. Plain class names, no
+ * Tailwind (Tailwind scans src/, utilities used here would leak into
+ * globals). Hidden starting states are set by the builder after mount.
+ */
+
+/* Wireframe layer: page coordinates, above the sticky navbar (z 50). */
+.acb-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.acb-layer .acb-item {
+  will-change: opacity;
+}
+
+/* Units not built yet: their CSS animations (roles morph, marquee,
+   light-lines, rotating borders) wait and start on reveal. */
+[data-acb-pending],
+[data-acb-pending] * {
+  animation-play-state: paused !important;
+}
+
+/* Entrance animations of Vengeance components inside built sections
+   (files not modified): !important beats motion's inline / WAAPI values.
+   StaggeredGrid offsets its columns with margin, so transform is free;
+   bento tiles keep their transform (layout animations on expand). */
+html[data-acb-site] .sg-item {
+  opacity: 1 !important;
+  transform: none !important;
+}
+html[data-acb-site] #projects [role="list"] > li {
+  opacity: 1 !important;
+}
+
+/* ---------- wireframes ---------- */
+
+.acb-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--acb-c);
+}
+.acb-outline {
+  position: absolute;
+  inset: 0;
+}
+.acb-line {
+  position: absolute;
+  background: currentColor;
+  box-shadow: 0 0 4px currentColor;
+}
+/* Brighter while an agent works on it (outline opacity is driven inline). */
+.acb-item[data-active="true"] .acb-line {
+  box-shadow:
+    0 0 6px currentColor,
+    0 0 14px color-mix(in oklch, currentColor 60%, transparent);
+}
+.acb-top,
+.acb-bottom {
+  left: 0;
+  width: 100%;
+  height: 1px;
+}
+.acb-top {
+  top: 0;
+  transform-origin: left center;
+}
+.acb-bottom {
+  bottom: 0;
+  transform-origin: right center;
+}
+.acb-left,
+.acb-right {
+  top: 0;
+  width: 1px;
+  height: 100%;
+}
+.acb-left {
+  left: 0;
+  transform-origin: center bottom;
+}
+.acb-right {
+  right: 0;
+  transform-origin: center top;
+}
+.acb-handle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: 1px solid currentColor;
+  background: oklch(0.13 0 0);
+}
+.acb-handle[data-corner="tl"] {
+  top: -2px;
+  left: -2px;
+}
+.acb-handle[data-corner="tr"] {
+  top: -2px;
+  right: -2px;
+}
+.acb-handle[data-corner="bl"] {
+  bottom: -2px;
+  left: -2px;
+}
+.acb-handle[data-corner="br"] {
+  right: -2px;
+  bottom: -2px;
+}
+/* Long hairlines across the section, along the element's top and left
+   edges (positions/lengths inline). Opacity is driven inline, so the
+   faintness lives in the colour. */
+.acb-guide {
+  position: absolute;
+  pointer-events: none;
+}
+.acb-guide-x {
+  top: 0;
+  height: 1px;
+  background: color-mix(in oklch, currentColor 38%, transparent);
+}
+.acb-guide-y {
+  left: 0;
+  width: 1px;
+  background: color-mix(in oklch, currentColor 38%, transparent);
+}
+
+/* Figma-style size label under the box. */
+.acb-size {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  color: var(--acb-c);
+  font:
+    500 9.5px/1 var(--font-geist-mono),
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ---------- placeholders ---------- */
+
+.acb-skel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(2px, 10%, 10px);
+  padding: clamp(1px, 6%, 10px) 0;
+  overflow: hidden;
+}
+.acb-bar {
+  display: block;
+  height: clamp(2px, 16%, 12px);
+  border-radius: 999px;
+}
+.acb-skel .acb-bar {
+  background: color-mix(in oklch, currentColor 30%, transparent);
+}
+.acb-skel .acb-block {
+  flex: 1;
+  border-radius: 6px;
+  background: color-mix(in oklch, currentColor 16%, transparent);
+}
+.acb-skel[data-type="image"] {
+  padding: 0;
+  border-radius: 6px;
+  background: color-mix(in oklch, currentColor 10%, transparent);
+}
+.acb-x {
+  width: 100%;
+  height: 100%;
+}
+.acb-x line {
+  stroke: currentColor;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.6;
+}
+
+/* ---------- agent swarm ---------- */
+
+.acb-swarm {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+.acb-swarm[data-leaving="true"] {
+  opacity: 0;
+}
+/* Agent origin = its HOTSPOT (pointer/arrow tip, reticle/orb centre). */
+.acb-agent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--acb-c);
+}
+/* will-change only while the swarm is actually moving. */
+.acb-swarm[data-moving="true"] .acb-agent,
+.acb-swarm[data-moving="true"] .acb-agent-body {
+  will-change: transform;
+}
+/* Gentle idle drift (compositor-only, on an inner element). */
+.acb-agent-drift {
+  position: relative;
+  width: 0;
+  height: 0;
+  animation: vui-acb-drift 3.2s ease-in-out infinite alternate;
+}
+.acb-agent:nth-child(2n) .acb-agent-drift {
+  animation-duration: 3.8s;
+  animation-delay: -1.2s;
+}
+.acb-agent:nth-child(3n) .acb-agent-drift {
+  animation-duration: 4.4s;
+  animation-delay: -2.1s;
+}
+/* Swarm gone (everything built): stop the drift. It runs on the main
+   thread (a 0×0 element isn't composited) and would restyle 12 agents
+   every frame for nothing. */
+.acb-swarm[data-leaving="true"] .acb-agent-drift {
+  animation-play-state: paused;
+}
+/* Small enough that neighbours' drift can't close CURSOR_GAP. */
+@keyframes vui-acb-drift {
+  to {
+    transform: translate(-3px, 4px);
+  }
+}
+/* Tilt + press are written inline by the renderer, around the hotspot. */
+.acb-agent-body {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+.acb-glyph {
+  position: absolute;
+  display: block;
+  overflow: visible;
+}
+
+/* pointer: rounded multiplayer pointer, colour fill, 2px white outline,
+   soft colour glow. Tip at (3, 3) of the 24-unit box → offset 2.75px. */
+.acb-glyph-pointer {
+  top: -2.75px;
+  left: -2.75px;
+  fill: var(--acb-c);
+  stroke: white;
+  stroke-width: 4.4px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+  filter: drop-shadow(
+    0 2px 6px color-mix(in oklch, var(--acb-c) 55%, transparent)
+  );
+}
+/* arrow: sharp classic arrow, colour fill, thin dark outline. */
+.acb-glyph-arrow {
+  top: -2px;
+  left: -2px;
+  fill: var(--acb-c);
+  stroke: oklch(0.12 0 0);
+  stroke-width: 1.2px;
+  stroke-linejoin: miter;
+  filter: drop-shadow(
+    0 0 4px color-mix(in oklch, var(--acb-c) 50%, transparent)
+  );
+}
+/* reticle: ring + ticks + centre dot; spins while working, still otherwise. */
+.acb-glyph-reticle {
+  top: -11px;
+  left: -11px;
+  fill: none;
+  stroke: var(--acb-c);
+  stroke-width: 1.6px;
+  stroke-linecap: round;
+  filter: drop-shadow(
+    0 0 4px color-mix(in oklch, var(--acb-c) 55%, transparent)
+  );
+}
+.acb-glyph-reticle .acb-glyph-dot {
+  fill: var(--acb-c);
+  stroke: none;
+}
+.acb-agent[data-working="true"] .acb-glyph-reticle {
+  animation: vui-acb-spin 6s linear infinite;
+}
+@keyframes vui-acb-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+/* orb: glowing colour dot with a white core + a short trail. */
+.acb-glyph-orb {
+  top: -11px;
+  left: -11px;
+  fill: var(--acb-c);
+  filter: drop-shadow(0 0 5px var(--acb-c))
+    drop-shadow(0 0 12px color-mix(in oklch, var(--acb-c) 60%, transparent));
+}
+.acb-glyph-orb .acb-glyph-core {
+  fill: white;
+}
+.acb-trail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--acb-c);
+  transition: opacity 0.25s ease;
+}
+.acb-trail[data-d="0"] {
+  opacity: 0.55;
+}
+.acb-trail[data-d="1"] {
+  width: 7px;
+  height: 7px;
+  opacity: 0.4;
+}
+.acb-trail[data-d="2"] {
+  width: 6px;
+  height: 6px;
+  opacity: 0.27;
+}
+.acb-trail[data-d="3"] {
+  width: 5px;
+  height: 5px;
+  opacity: 0.15;
+}
+/* The trail collapses (fades) whenever the orb isn't travelling. */
+.acb-agent:not([data-travel="true"]) .acb-trail {
+  opacity: 0;
+}
+
+/* Click ripple from the hotspot (WAAPI-driven from the builder loop). */
+.acb-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--acb-c);
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+}
+.acb-agent[data-style="arrow"] .acb-ring {
+  width: 16px;
+  height: 16px;
+}
+
+/* SHOW_LABELS only: "Agent-N · task" pill beside the cursor. */
+.acb-pill {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--acb-c);
+  color: oklch(0.14 0 0);
+  font:
+    600 10px/1 var(--font-geist-mono),
+    ui-monospace,
+    monospace;
+  white-space: nowrap;
+}
+.acb-agent[data-working="true"] .acb-pill {
+  box-shadow: 0 0 12px color-mix(in oklch, var(--acb-c) 55%, transparent);
+}
+
+/* ---------- HUD ---------- */
+
+/* Bottom-left, compact: at desktop widths this is the gutter beside the
+   centred content column. Two lines keep it narrow. */
+.acb-hud {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  max-width: 11rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 0.75rem;
+  background: var(--glass-surface);
+  backdrop-filter: blur(12px);
+  color: var(--muted-foreground);
+  font:
+    500 11px/1.35 var(--font-geist-mono),
+    ui-monospace,
+    monospace;
+  pointer-events: none;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
+/* Only the tour buttons take pointer input; the pill never blocks content. */
+.acb-hud-btn {
+  margin-top: 0.15rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: oklch(1 0 0 / 0.06);
+  color: var(--foreground);
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.acb-hud-btn:hover {
+  background: oklch(1 0 0 / 0.12);
+}
+.acb-hud-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.acb-hud-btn[data-empty] {
+  visibility: hidden;
+}
+/* Two lines reserved: "Auto-tour in 3…" and the counts take the same
+   height, so the pill never grows or shrinks. */
+.acb-hud-text {
+  min-height: 2.7em;
+}
+/* Visually hidden live region (tour status changes only). */
+.acb-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.acb-hud[data-hidden="true"] {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(0.75rem);
+  /* Get out of the way fast when content arrives; reappear gently. */
+  transition-duration: 0.12s;
+}
+.acb-hud-dots {
+  display: flex;
+  gap: 3px;
+}
+.acb-hud-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--acb-c);
+  box-shadow: 0 0 6px var(--acb-c);
+}
+.acb-hud-count {
+  color: var(--foreground);
+}
+/* Fixed box: "2/43" → "19/43" must not resize the pill (layout shift). */
+.acb-hud-layers {
+  display: inline-block;
+  min-width: 5ch;
+  text-align: center;
+}
+.acb-hud-bar {
+  display: block;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: oklch(1 0 0 / 0.1);
+}
+.acb-hud-fill {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--brand-teal), var(--brand-violet));
+  transition: transform 0.3s ease;
+}
+.acb-hud-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.acb-hud-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: oklch(0.85 0.17 85);
+}
+.acb-hud-status[data-status="done"]::before {
+  background: oklch(0.85 0.2 145);
+}
+.acb-hud-status[data-status="building"]::before {
+  animation: vui-acb-blink 1s steps(2, jump-none) infinite;
+}
+@keyframes vui-acb-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .acb-hud-status::before {
+    animation: none;
+  }
+}

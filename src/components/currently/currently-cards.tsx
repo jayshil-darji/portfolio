@@ -1,5 +1,6 @@
 "use client";
 
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import {
   BookOpen,
   Compass,
@@ -36,7 +37,10 @@ export function CurrentlyCards({ items }: { items: CurrentlyItem[] }) {
       renderItem={(item, i) => {
         const Icon = ICONS[item.label.toLowerCase()] ?? Sparkles;
         return (
-          <div className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-[translate,border-color,background-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-[0_10px_40px_-10px_oklch(0.6_0.15_240/0.35)] motion-reduce:hover:translate-y-0 sm:p-6">
+          <div
+            {...agentBuildAttrs("block")}
+            className="group relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-[translate,border-color,background-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.05] hover:shadow-[0_10px_40px_-10px_oklch(0.6_0.15_240/0.35)] motion-reduce:hover:translate-y-0 sm:p-6"
+          >
             <BorderBeam
               size={90}
               duration={6}

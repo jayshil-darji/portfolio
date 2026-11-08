@@ -30,67 +30,12 @@
   color: oklch(0.86 0.1 220);
 }
 
-/* ---------- Background layers ---------- */
-/* Aurora rays: dimmed so the name is the brightest element; fades in on
-   mount (AnimatedRays renders after hydration). `from`-only keyframes
-   animate up to the element's own opacity. */
-.hero-rays {
-  opacity: 0.45;
-  animation: hero-fade 1.6s ease-out both;
-}
-
+/* Fade-in from transparent up to the element's own opacity (the video
+   pause toggle). */
 @keyframes hero-fade {
   from {
     opacity: 0;
   }
-}
-
-/* The upstream effect uses mix-blend-mode: difference, which produces
-   complementary greens/oranges/reds. This `color` blend layer keeps the
-   rays' brightness but forces their hue into teal → blue → violet. */
-.hero-rays-tint {
-  background: linear-gradient(
-    100deg,
-    var(--brand-teal) 0%,
-    var(--brand-blue) 50%,
-    var(--brand-violet) 100%
-  );
-  mix-blend-mode: color;
-}
-
-/* Receding grid floor: one element, two gradients, a 3D tilt and a mask. */
-.hero-grid {
-  background-image:
-    linear-gradient(to right, oklch(1 0 0 / 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(1 0 0 / 0.07) 1px, transparent 1px);
-  background-size: 48px 48px;
-  background-position: center top;
-  transform: perspective(600px) rotateX(55deg) scale(2);
-  transform-origin: center top;
-  mask-image: radial-gradient(
-    ellipse 60% 70% at 50% 0%,
-    black 0%,
-    transparent 70%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse 60% 70% at 50% 0%,
-    black 0%,
-    transparent 70%
-  );
-}
-
-.hero-glow {
-  background:
-    radial-gradient(
-      40% 35% at 15% 85%,
-      oklch(0.55 0.2 290 / 0.18),
-      transparent 70%
-    ),
-    radial-gradient(
-      45% 40% at 50% 45%,
-      oklch(0.6 0.15 240 / 0.1),
-      transparent 70%
-    );
 }
 
 /* ---------- Small details ---------- */
@@ -129,10 +74,69 @@
 /* ---------- Reduced motion: everything static and visible ---------- */
 @media (prefers-reduced-motion: reduce) {
   .hero-reveal,
-  .hero-rays,
   .hero-ping,
   .live-ping,
-  .hero-scroll-dot {
+  .hero-scroll-dot,
+  .hero-video-toggle {
     animation: none !important;
+  }
+}
+
+/* ---------- Video backdrop (hero-video-background.tsx) ----------
+   The clip stays invisible (the poster shows) until its first frame is
+   up, then fades in over the poster. */
+.hero-video-clip {
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+.hero-video-clip[data-shown="true"] {
+  opacity: 1;
+}
+
+/* Per-option overlay + object-position (HERO_BACKDROPS, set as inline
+   vars on the backdrop): --x below 768px, --x-md from 768px, --x-lg from
+   1024px; a missing breakpoint falls back to the next smaller one. */
+.hero-scrim {
+  background: var(--scrim);
+}
+.hero-media {
+  object-position: var(--pos, center);
+}
+@media (min-width: 768px) {
+  .hero-scrim {
+    background: var(--scrim-md, var(--scrim));
+  }
+  .hero-media {
+    object-position: var(--pos-md, var(--pos, center));
+  }
+}
+@media (min-width: 1024px) {
+  .hero-scrim {
+    background: var(--scrim-lg, var(--scrim-md, var(--scrim)));
+  }
+  .hero-media {
+    object-position: var(--pos-lg, var(--pos-md, var(--pos, center)));
+  }
+}
+
+/* Pause / play toggle: appears when the video starts. */
+.hero-video-toggle {
+  animation: hero-fade 0.6s ease-out both;
+}
+
+/* ---------- Left-aligned layout (≥1024px, HERO_BACKDROPS align) ----------
+   MorphText centres its absolutely positioned words with an inline
+   left: 50% + a keyframed translate(-50%); the independent `translate`
+   property adds the half width back, so each word starts at the left edge
+   (the component itself is untouched). */
+@media (min-width: 1024px) {
+  /* The root centres a zero-width rotator (its words are absolute):
+     stretch it so `left: 0` is the column's left edge. */
+  .hero-content-left .morph-text-root {
+    align-items: stretch;
+  }
+  .hero-content-left .morph-word {
+    left: 0 !important;
+    translate: 50% 0;
   }
 }

@@ -2,6 +2,11 @@
 
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
+import { useBuildActive } from "@/components/experimental/agent-cursor/build-state";
+import {
+  agentBuildAttrs,
+  type AgentBuildType,
+} from "@/components/experimental/agent-cursor/config";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 /**
@@ -16,6 +21,7 @@ export function ContactReveal({
   y = 16,
   amount = 0.5,
   className,
+  build,
 }: {
   children: ReactNode;
   delay?: number;
@@ -26,17 +32,27 @@ export function ContactReveal({
   /** Fraction of the element that must be visible to trigger. */
   amount?: number;
   className?: string;
+  /** EXPERIMENT (agent-cursor): mark as a build unit (no-op when off). */
+  build?: AgentBuildType;
 }) {
   const reduced = usePrefersReducedMotion();
+  // EXPERIMENT (agent-cursor): inside the build, the build reveals it. The
+  // signal arrives after hydration, when motion has already applied
+  // `initial` — so snap to the final values explicitly (animate, 0s).
+  const buildActive = useBuildActive();
+  const still = reduced || buildActive;
+  const shown = { opacity: 1, x: 0, y: 0 };
   return (
     <motion.div
+      {...(build ? agentBuildAttrs(build) : {})}
       className={className}
       initial={reduced ? false : { opacity: 0, x, y }}
-      whileInView={{ opacity: 1, x: 0, y: 0 }}
+      animate={buildActive ? shown : undefined}
+      whileInView={buildActive ? undefined : shown}
       viewport={{ once: true, amount }}
       transition={{
-        duration: reduced ? 0 : 0.8,
-        delay: reduced ? 0 : delay,
+        duration: still ? 0 : 0.8,
+        delay: still ? 0 : delay,
         ease: [0.22, 1, 0.36, 1],
       }}
     >

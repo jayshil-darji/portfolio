@@ -35,7 +35,7 @@ After adding a component, always review it — registry code is copied into
 the repo and is ours to maintain. Checklist:
 
 - **Missing CSS:** some items rely on global CSS from the Vengeance UI repo
-  (or missing upstream entirely, e.g. `animated-rays`). Vendor it into
+  (or missing upstream entirely). Vendor it into
   `src/styles/vengeance.css` (prefix keyframes `vui-`, add a
   `prefers-reduced-motion` fallback).
 - **`framer-motion` imports:** rewrite to `motion/react` and
@@ -51,7 +51,7 @@ the repo and is ours to maintain. Checklist:
 
 Installed + patched so far: `flip-fade-text` (hero name loop; grapheme-safe,
 reserves the largest word's box, single-word replay, `alignTo` phase lock),
-`animated-rays`, `morph-text`,
+`morph-text`,
 `stats-counter`, `stagger-text`, `border-beam`, `solar-system`,
 `interactive-particles`, `ascii-glitch-ripple`, `expandable-bento-grid`
 (largely rewritten: in-grid accordion expansion instead of upstream's
@@ -79,13 +79,47 @@ Tried and not kept: `liquid-text` (WebGL canvas text: not accessible,
 131 KB gz with three.js, always-on render loop), `wave-grid-background`
 (three.js + 1,600 shadowed instanced cubes + post-processing, render loop
 never stops — lost to `light-lines` for the Contact background; evaluated
-from the registry JSON, never installed). The project has no GSAP
-dependency — port GSAP-based components to CSS/motion.
+from the registry JSON, never installed). Site components don't use
+GSAP — port GSAP-based components to CSS/motion. The only exception is the
+flag-gated experiment in `components/experimental/agent-cursor/` (the
+site builds itself on scroll; GSAP in a lazy chunk only; see its README for
+the architecture and removal steps).
+- Flag-gating a lazy chunk with Turbopack: the `import()` must sit in the
+  same module as the literal flag (an imported constant isn't folded, so
+  the chunk is still emitted). If that module is also imported by server
+  components, add `typeof window !== "undefined"` to the condition, or Next
+  preloads the client chunk as a page `<script>`.
+- Pre-paint state must not live on `<html>`/`<body>` attributes: React
+  reports attributes it didn't render as a hydration mismatch. Inject a
+  `<style id>` into `<head>` instead (extra head nodes are tolerated).
+- Anything that mutates page DOM from a layout-level client component must
+  wait for the PAGE segment to hydrate: it hydrates after the layout, and
+  inline styles written into it earlier are a hydration mismatch. Render
+  such roots inside the page (see `BuildRoot` in page.tsx).
+- `html { scroll-behavior: smooth }` makes the browser smooth-scroll to a
+  URL hash on load (~1s): treat a hash load like an anchor-click jump.
+- Motion components that already applied `initial` keep it when that prop
+  changes later: to skip an entrance after hydration, pass explicit
+  `animate` values (see ContactReveal).
+- Labelled cursors (agent swarm): separate them with boxes sized to the
+  label, not point distance — a point radius lets pills overlap side by
+  side, and agents clamped to a viewport edge form piles that need ~N
+  relaxation passes. Measure overlaps DURING the animation, not after it.
+- Scroll locks: toggling `overflow` / `scrollbar-gutter` on the root moves
+  centred content by half a scrollbar when released (CLS). Block scroll
+  input (wheel / touchmove / scroll keys) instead.
+- Measuring LCP here: the hero text starts at opacity 0 (CSS entrance), so
+  Chrome reports a navbar link as LCP whether the hero appears at 0.5s or
+  2s. Measure when the `<h1>` is actually visible (rAF probe on its
+  opacity/clip) alongside the LCP entry. The FlipFadeText loop re-mounts
+  letter spans, so later LCP entries (7s+) are artefacts.
 Removed once unused (no dead code): `interactive-hover-button`,
 `animated-tooltip`, the Magnetic / Tilt primitives, `gooey-text-reveal`
 (its SVG alpha-threshold filter rendered jagged, pixelated edges on large
 desktop text), `flip-text` (replaced by `flip-fade-text`),
-`animated-footer` (footer is now a slim © + "Back to top" row).
+`animated-footer` (footer is now a slim © + "Back to top" row),
+`animated-rays` + the hero rays/grid backdrop and the "coded" intro→loop
+video option (the hero backdrop is now a looping video, see below).
 
 **Don't blindly re-run `shadcn add` on an installed component** — it
 overwrites the file and silently drops every `LOCAL PATCH`. Diff the
@@ -110,15 +144,17 @@ props table against the actual source.
 src/
 ├── app/
 │   ├── globals.css        # Tailwind v4 + shadcn theme tokens + global motion rules
-│   ├── layout.tsx         # <html class="dark">, fonts, metadata, Navbar, MotionProvider
-│   └── page.tsx           # Single page: composes the sections in order
+│   ├── layout.tsx         # <html class="dark">, fonts, metadata, skip link, Navbar, Vercel analytics
+│   ├── page.tsx           # Single page: composes the sections in order + JSON-LD Person
+│   ├── not-found.tsx      # Styled 404 ("Back home")
+│   ├── sitemap.ts / robots.ts / manifest.ts
+│   └── favicon.ico, icon.png, apple-icon.png, opengraph-image.png, twitter-image.png
 ├── components/
 │   ├── about/             # About-section client parts (AboutPhoto)
-│   ├── backgrounds/       # Decorative animated backdrops (e.g. hero-background)
 │   ├── contact/           # Contact client parts (copy button, local time, reveal)
 │   ├── currently/         # Currently-section client parts (CurrentlyCards)
 │   ├── experience/        # Scroll-drawn milestone timeline
-│   ├── hero/              # Hero client parts (HeroName: name flips synced to the roles)
+│   ├── hero/              # Hero client parts (HeroName: name flips synced to the roles; HeroVideoBackground)
 │   ├── skills/            # Skills UI: explorer, filter tabs, chips, detail, code block
 │   ├── icons/             # Brand SVG icons (lucide v1 has no brand icons)
 │   ├── layout/            # Navbar (spotlight + scroll-spy), MobileMenu, Section + SectionHeading, SiteFooter
@@ -129,6 +165,7 @@ src/
 │   └── ui/                # shadcn / Vengeance UI components (CLI-managed)
 ├── data/
 │   ├── brand-colors.ts    # Brand colours (skills + socials) — the only place for brand hex values
+│   ├── hero-background.ts # Hero video option ("ai" | "office") + per-option layout/overlay config
 │   ├── nav.ts             # Section ids + nav items (navbar, mobile menu, headings)
 │   └── profile.ts         # ALL personal content (typed; "TODO…" = placeholder)
 ├── fonts/                 # Self-hosted subset fonts for next/font/local (+ licences)
@@ -140,10 +177,11 @@ src/
 ├── lib/
 │   ├── skill-icons.tsx    # Skill logos (simple-icons + monograms) as an SVG sprite
 │   ├── skills-to-orbits.ts # profile.skills → SolarSystem rings + filter groups
+│   ├── site-url.ts        # SITE_URL (NEXT_PUBLIC_SITE_URL → Vercel prod domain → localhost)
 │   ├── social-items.tsx   # GitHub/LinkedIn/Email tiles (hero + contact)
 │   └── utils.ts           # cn() helper
 └── styles/
-    ├── hero.css           # Hero entrance stagger + background layers
+    ├── hero.css           # Hero entrance stagger, video overlay/position vars, left-aligned layout
     ├── solar-system.css   # Scoped styles for the patched SolarSystem
     ├── timeline.css       # Experience timeline (fill, nodes, card reveal)
     └── vengeance.css      # CSS that Vengeance UI components need but don't ship
@@ -156,10 +194,25 @@ Sections (in order, each with matching `id`): `hero`, `about`, `currently`,
 
 - **Project images live in `public/images/projects/{slug}.jpg`;
   recommended 1600×1000** (16:10 — every cover box is 16:10, so the image
-  shows uncropped). To use a real screenshot, overwrite the file: no code
-  change. The current files are generated placeholders (abstract covers in
-  the theme palette with the project name). `image` is set per project in
-  `profile.ts`; without it a CSS cover is generated.
+  shows uncropped). `image` is required per project in `profile.ts`. When
+  replacing a file under the same name, clear `.next/cache/images` (the
+  image optimiser caches by URL, so the old picture keeps being served).
+- **Hero videos live in `public/videos/hero/{ai,office}/`:**
+  `hero-loop.{webm,mp4}` (desktop, 1280×720, seamless loop),
+  `hero-loop-mobile.{webm,mp4}` (portrait crop, used below 768px),
+  `hero-poster.jpg`, `hero-poster-mobile.jpg`. Pick the option with
+  `HERO_BACKGROUND` in `src/data/hero-background.ts`; alignment, overlay
+  gradients and object-position per breakpoint live in `HERO_BACKDROPS`
+  there (applied as CSS vars). The poster is the first visual; the video
+  loads after `load`, and is poster-only with reduced motion / Save-Data /
+  a failed load. Check WCAG contrast over the brightest frames when
+  changing an overlay or a video.
+- **Icons / share images are file-based in `src/app/`** (never a root
+  `app/` folder: Next then ignores `src/app` entirely). The site URL comes
+  from `NEXT_PUBLIC_SITE_URL` (`.env.example`); SEO copy from
+  `profile.seo`. Vercel Analytics / Speed Insights render only when
+  `VERCEL=1` (their scripts 404 on a local `next start`).
+
 ## Rules
 
 1. **Content lives in one file.** All personal content — name, roles,
@@ -192,7 +245,8 @@ Sections (in order, each with matching `id`): `hero`, `about`, `currently`,
    - Animate `transform` / `opacity` only; avoid layout thrash.
    - Above-the-fold entrance animations are CSS (`.hero-reveal` + `--d`
      delay) so the LCP text doesn't wait for hydration.
-   - Pause off-screen ambient loops (see `HeroBackground` + `data-paused`).
+   - Pause off-screen ambient loops (see `RotatingBorder` + `data-paused`;
+     the hero video pauses off-screen / in a hidden tab).
 
 ### Gotchas learned the hard way
 - Never `typeof window` / `typeof document` in render or setState-in-effect
@@ -312,6 +366,18 @@ Sections (in order, each with matching `id`): `hero`, `about`, `currently`,
 - Scroll-linked reveals: drive them from raw `scrollY` against measured
   positions, not a spring-smoothed or clamped `scrollYProgress` (the spring
   made cards lag their nodes; the clamp at 0 pre-revealed the first card).
+- rAF loops that can be re-entered (a tick that starts work which calls
+  `loop()`): reschedule through the same guarded `loop()`, never a bare
+  `raf = requestAnimationFrame(tick)` — overwriting the id orphans a
+  chain, and chains pile up (the builder rendered ~5× per frame).
+- Per-frame DOM writers: skip unchanged inline-style / data-* writes, and
+  don't read `scrollY` / `innerHeight` / rects after this frame's writes
+  (forced sync restyle). Profile with a CDP trace + stack category to see
+  which JS forces each UpdateLayoutTree.
+- Hidden-but-layered elements in a 3D context (e.g. 22 solar-system
+  lasers at opacity 0): `visibility: hidden` (flipped after the fade)
+  drops their composited layers. `content-visibility: auto` on the solar
+  system was measured and made scrolling WORSE (re-render on entry).
 - Cycling text crossfades: make outgoing/incoming opacities complementary
   (MorphText: in over 0–20% of a slot, out over the next word's 0–20%).
   Fading both at once through the gooey threshold filter blanks the line.

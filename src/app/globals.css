@@ -162,8 +162,8 @@ html {
   --glass-border: oklch(1 0 0 / 0.12);
 }
 
-/* Brand accents (teal → blue → violet), shared by the hero rays and the
-   accent components (creepy button, social flip). */
+/* Brand accents (teal → blue → violet), shared by the accent components
+   (creepy button, social flip, rotating borders). */
 :root {
   --brand-teal: oklch(0.7 0.12 195);
   --brand-blue: oklch(0.62 0.17 255);

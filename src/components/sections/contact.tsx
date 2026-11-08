@@ -1,3 +1,4 @@
+import { agentBuildAttrs } from "@/components/experimental/agent-cursor/config";
 import { Clock, MapPin } from "lucide-react";
 import { ContactReveal } from "@/components/contact/contact-reveal";
 import { CopyEmailButton } from "@/components/contact/copy-email-button";
@@ -44,6 +45,7 @@ export function Contact() {
         y={0}
         amount={0.4}
         className="ml-[calc(50%-50vw)] w-screen"
+        build="image"
       >
         <MagneticSpotlightMarquee
           text={contact.marquee}
@@ -52,7 +54,7 @@ export function Contact() {
       </ContactReveal>
 
       <div className="mt-14 grid gap-12 md:mt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-center lg:gap-16">
-        <div>
+        <div {...agentBuildAttrs("text")}>
           <ContactReveal delay={0.3}>
             <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl md:text-4xl">
               {contact.heading}
@@ -78,7 +80,7 @@ export function Contact() {
           </ContactReveal>
         </div>
 
-        <ContactReveal delay={0.66} y={40} amount={0.3}>
+        <ContactReveal delay={0.66} y={40} amount={0.3} build="block">
           <InteractiveGlowCard
             borderRadius="1.25rem"
             className="border border-[var(--glass-border)]"
